@@ -61,10 +61,17 @@ Scope for first deliverable:
 - Clear errors for unsupported files, over-limit duration, or >24 slices.
 - Download flow works in browser (Electron slot write is out of scope for this iteration).
 
-## Next steps to implement
-1) Add ffmpeg.wasm wrapper and a worker-based pipeline; wire to UI dropzone and slice list state.
-2) Implement duration probe + normalization/trim pipeline; unit tests for conversions and length enforcement.
-3) Implement pack assembly and download as `.aif`; add basic manual QA checklist (import to OP-Z, no `rejected/`).
+## Status (phase 1)
+- UI scaffolding in `src/App.tsx` with drag/drop, settings, validation, and export CTA.
+- Slice ingestion using Web Audio duration probe; limits to 24 slices; warns on >12s total.
+- ffmpeg.wasm wrapper (`src/audio/ffmpeg.ts`) concatenates inputs, normalizes, trims silence, enforces 12s, and emits AIFF.
+- Pack writer (`src/audio/aiff.ts`, `src/audio/pack.ts`) injects OP-1/OP-Z drum metadata via an `APPL` chunk (start/end per slice, scaled by 4096 like teoperator/op-1 format) so slicing follows the provided order instead of equal splits.
+- Export flow downloads `opz-drum-pack.aif` in browser. Slot writing is deferred to Electron.
+
+## Next steps
+1) Move ffmpeg work into a Web Worker to avoid main-thread blocking; add progress hooks.
+2) Add per-slice preview and waveform hints; enable drag/drop reordering with a11y focus.
+3) Add unit/CLI tests for duration enforcement and filter strings; add manual QA checklist (OP-Z import, no `rejected/`).
 
 
 ## Notes
