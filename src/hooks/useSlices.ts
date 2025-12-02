@@ -2,32 +2,17 @@ import { useCallback, useMemo, useState } from 'react';
 import { probeDuration } from '../audio/metadata';
 import { classifyAudio } from '../audio/classify';
 import { convertToWav } from '../audio/convert';
-import type { Slice, NormalizeMode, SampleAnalysis } from '../types';
-
-const MAX_SLICES = 24;
-
-function formatNamePrefix(analysis: SampleAnalysis): string {
-  if (!analysis) return 'sample';
-
-  if (analysis.type === 'drum_hit' && analysis.drumClass) {
-    return analysis.drumClass;
-  }
-
-  if (analysis.type === 'melodic') {
-    if (analysis.noteName) return analysis.noteName.replace(/\s+/g, '');
-    return 'melodic';
-  }
-
-  return 'sample';
-}
+import { formatNamePrefix } from '../utils/naming';
+import { MAX_SLICES, MAX_DURATION_SECONDS, DEFAULT_SILENCE_THRESHOLD } from '../constants';
+import type { Slice, NormalizeMode } from '../types';
 
 export function useSlices() {
   const [slices, setSlices] = useState<Slice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [normalizeMode, setNormalizeMode] = useState<NormalizeMode>('loudnorm');
-  const [silenceThreshold, setSilenceThreshold] = useState(-35);
-  const [maxDuration] = useState(12);
+  const [silenceThreshold, setSilenceThreshold] = useState(DEFAULT_SILENCE_THRESHOLD);
+  const [maxDuration] = useState(MAX_DURATION_SECONDS);
 
   const totalDuration = useMemo(
     () => slices.reduce((acc, slice) => acc + (Number.isFinite(slice.duration) ? slice.duration : 0), 0),

@@ -59,6 +59,8 @@ Open http://localhost:5173
 ```bash
 bun run build      # or npm run build
 bun run preview    # or npm run preview
+bun run test       # run tests
+bun run test:ui    # run tests with UI
 ```
 
 ## Documentation
@@ -72,6 +74,7 @@ bun run preview    # or npm run preview
 - **UI**: Vite + React + TypeScript + MUI
 - **Audio**: ffmpeg.wasm (client-side processing)
 - **Format**: Custom AIFF encoder with OP-Z drum metadata injection
+- **Testing**: Vitest with pure function unit tests
 
 ## Notes
 

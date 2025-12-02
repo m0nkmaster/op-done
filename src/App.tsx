@@ -15,7 +15,6 @@ import {
   MenuItem,
   Paper,
   Stack,
-  Switch,
   TextField,
   Toolbar,
   Typography
@@ -24,19 +23,15 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DownloadIcon from '@mui/icons-material/Download';
-import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import SettingsIcon from '@mui/icons-material/Settings';
 import theme from './theme';
 import { ThemeProvider } from '@mui/material/styles';
 import { useSlices } from './hooks/useSlices';
+import { createDefaultMetadata, updateMetadataArray, ensureMetadataLength } from './utils/metadata';
+import { formatDuration } from './utils/audio';
 import type { Slice, DrumMetadata } from './types';
 import { buildDrumPack } from './audio/pack';
 import { TEBackground } from './components/TEBackground';
-
-function formatDuration(value: number): string {
-  if (!Number.isFinite(value)) return '0.0s';
-  return `${value.toFixed(2)}s`;
-}
 
 function WaveformPreview({
   slice,
@@ -205,15 +200,7 @@ function App() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const [metadata, setMetadata] = useState<DrumMetadata>({
-    name: 'op-done',
-    octave: 0,
-    drumVersion: 3,
-    pitch: new Array(24).fill(0),
-    playmode: new Array(24).fill(8192),
-    reverse: new Array(24).fill(8192),
-    volume: new Array(24).fill(8192)
-  });
+  const [metadata, setMetadata] = useState<DrumMetadata>(createDefaultMetadata());
 
   const overDuration = useMemo(() => totalDuration > maxDuration, [totalDuration, maxDuration]);
   const disabledExport = !slices.length || overDuration || isProcessing || slices.some((s) => s.status !== 'ready');
@@ -291,31 +278,16 @@ function App() {
       anchor.download = 'opz-drum-pack.aif';
       anchor.click();
       URL.revokeObjectURL(url);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setExportError(err?.message ?? 'Export failed. Please retry.');
+      setExportError((err as Error)?.message ?? 'Export failed. Please retry.');
     } finally {
       setIsExporting(false);
     }
   };
 
   useEffect(() => {
-    setMetadata((prev) => {
-      const resize = (arr: number[], fill: number) => {
-        const next = arr.slice(0, 24);
-        while (next.length < Math.min(24, slices.length || 24)) {
-          next.push(fill);
-        }
-        return next;
-      };
-      return {
-        ...prev,
-        pitch: resize(prev.pitch, 0),
-        playmode: resize(prev.playmode, 8192),
-        reverse: resize(prev.reverse, 8192),
-        volume: resize(prev.volume, 8192)
-      };
-    });
+    setMetadata((prev) => ensureMetadataLength(prev, slices.length));
   }, [slices.length]);
 
   useEffect(() => {
@@ -327,11 +299,7 @@ function App() {
     key: 'volume' | 'pitch' | 'reverse' | 'playmode',
     value: number
   ) => {
-    setMetadata((prev) => {
-      const nextArr = [...(prev[key] as number[])];
-      nextArr[index] = value;
-      return { ...prev, [key]: nextArr };
-    });
+    setMetadata((prev) => updateMetadataArray(prev, key, index, value));
   };
 
   return (
@@ -394,7 +362,7 @@ function App() {
 
                     <Divider flexItem />
                     <Typography variant="h6" sx={{ color: 'text.secondary', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Processing</Typography>
-                    <TextField select size="small" label="Normalize" value={normalizeMode} onChange={(e) => setNormalizeMode(e.target.value as any)}>
+                    <TextField select size="small" label="Normalize" value={normalizeMode} onChange={(e) => setNormalizeMode(e.target.value as 'loudnorm' | 'peak' | 'off')}>
                       <MenuItem value="loudnorm">Loudness (LUFS)</MenuItem>
                       <MenuItem value="peak">Peak</MenuItem>
                       <MenuItem value="off">Off</MenuItem>

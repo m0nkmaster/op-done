@@ -1,4 +1,4 @@
-import { Box, Slider, Stack, Typography } from '@mui/material';
+import { Slider, Stack, Typography } from '@mui/material';
 import { semitonesToNote } from '../audio/pitch';
 
 export function PitchDial({

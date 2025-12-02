@@ -1,4 +1,5 @@
 import { ensureFFmpeg } from './ffmpeg';
+import { frequencyToNote as utilFrequencyToNote, semitonesToPitchParam as utilSemitonesToPitchParam } from '../utils/audio';
 
 // Autocorrelation-based pitch detection
 export async function detectPitch(file: File): Promise<{ note: string | null; frequency: number | null }> {
@@ -95,7 +96,9 @@ function autoCorrelate(buffer: Float32Array, sampleRate: number): number | null 
   if (bestCorrelation > 0.1 && bestOffset > 0) {
     // Parabolic interpolation for sub-sample accuracy
     if (bestOffset > minPeriod && bestOffset < maxPeriod - 1) {
-      let y1 = 0, y2 = bestCorrelation, y3 = 0;
+      let y1 = 0;
+      const y2 = bestCorrelation;
+      let y3 = 0;
       for (let i = 0; i < size - bestOffset - 1; i++) {
         y1 += normalized[i] * normalized[i + bestOffset - 1];
         y3 += normalized[i] * normalized[i + bestOffset + 1];
@@ -114,14 +117,7 @@ function autoCorrelate(buffer: Float32Array, sampleRate: number): number | null 
   return null;
 }
 
-export function frequencyToNote(freq: number): string {
-  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-  const a4 = 440;
-  const semitones = 12 * Math.log2(freq / a4);
-  const noteIndex = Math.round(semitones + 9) % 12;
-  const octave = Math.floor((semitones + 9) / 12) + 4;
-  return `${noteNames[noteIndex < 0 ? noteIndex + 12 : noteIndex]}${octave}`;
-}
+export const frequencyToNote = utilFrequencyToNote;
 
 export function semitonesToNote(baseFreq: number | null, semitones: number): string | null {
   if (!baseFreq) return null;
@@ -129,6 +125,4 @@ export function semitonesToNote(baseFreq: number | null, semitones: number): str
   return frequencyToNote(targetFreq);
 }
 
-export function semitonesToPitchParam(semitones: number): number {
-  return Math.round(8192 + semitones * 683);
-}
+export const semitonesToPitchParam = utilSemitonesToPitchParam;

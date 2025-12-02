@@ -1,8 +1,7 @@
 import type { DrumMetadata } from '../types';
-
-const INT32_MAX = 0x7fffffff;
-const OP1_SCALE = 4096; // matches values seen in OP-1/OP-Z drum metadata
-const MAX_POSITION = INT32_MAX - 1;
+import { padArray } from '../utils/array';
+import { encodePositions } from '../utils/opz';
+import { MAX_SLICES, OPZ_DEFAULTS } from '../constants';
 
 type ChunkInfo = {
   id: string;
@@ -63,26 +62,13 @@ export function parseAiff(buf: Uint8Array): AiffParseResult {
   return { chunks, numFrames, formSize };
 }
 
-function encodePositions(frames: number[]): number[] {
-  return frames.map((frame) => {
-    const scaled = Math.max(0, Math.round(frame * OP1_SCALE));
-    return Math.min(MAX_POSITION, scaled);
-  });
-}
-
 function buildDrumMetadataChunk(
   startFrames: number[],
   endFrames: number[],
   metadata: DrumMetadata
 ): Uint8Array {
-  const padTo24 = (arr: number[]) => {
-    const next = arr.slice(0, 24);
-    while (next.length < 24) next.push(0);
-    return next;
-  };
-
-  const start = padTo24(startFrames);
-  const end = padTo24(endFrames);
+  const start = padArray(startFrames, MAX_SLICES, 0);
+  const end = padArray(endFrames, MAX_SLICES, 0);
   const positionsStart = encodePositions(start);
   const positionsEnd = encodePositions(end);
 
@@ -91,12 +77,12 @@ function buildDrumMetadataChunk(
     type: 'drum',
     name: metadata.name,
     octave: metadata.octave,
-    pitch: padTo24(metadata.pitch ?? []),
+    pitch: padArray(metadata.pitch ?? [], MAX_SLICES, OPZ_DEFAULTS.PITCH),
     start: positionsStart,
     end: positionsEnd,
-    playmode: padTo24(metadata.playmode ?? []),
-    reverse: padTo24(metadata.reverse ?? []),
-    volume: padTo24(metadata.volume ?? []),
+    playmode: padArray(metadata.playmode ?? [], MAX_SLICES, OPZ_DEFAULTS.PLAYMODE),
+    reverse: padArray(metadata.reverse ?? [], MAX_SLICES, OPZ_DEFAULTS.REVERSE),
+    volume: padArray(metadata.volume ?? [], MAX_SLICES, OPZ_DEFAULTS.VOLUME),
     dyna_env: [0, 8192, 0, 8192, 0, 0, 0, 0],
     fx_active: false,
     fx_type: 'delay',
