@@ -2,6 +2,18 @@ export type SliceStatus = 'pending' | 'processing' | 'ready' | 'error';
 
 export type NormalizeMode = 'loudnorm' | 'peak' | 'off';
 
+export type SampleType = 'drum_hit' | 'melodic' | 'unknown';
+
+export type DrumClass = 'kick' | 'snare' | 'hat' | 'cymbal' | 'other';
+
+export interface SampleAnalysis {
+  type: SampleType;
+  drumClass?: DrumClass;
+  noteName?: string;
+  midiNote?: number;
+  confidence: number; // 0 to 1
+}
+
 export type Slice = {
   id: string;
   file: File;
@@ -9,7 +21,7 @@ export type Slice = {
   duration: number; // seconds
   status: SliceStatus;
   error?: string;
-  classification?: string;
+  analysis?: SampleAnalysis;
 };
 
 export type DrumMetadata = {

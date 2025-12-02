@@ -1,9 +1,24 @@
 import { useCallback, useMemo, useState } from 'react';
 import { probeDuration } from '../audio/metadata';
 import { classifyAudio } from '../audio/classify';
-import type { Slice, NormalizeMode } from '../types';
+import type { Slice, NormalizeMode, SampleAnalysis } from '../types';
 
 const MAX_SLICES = 24;
+
+function formatNamePrefix(analysis: SampleAnalysis): string {
+  if (!analysis) return 'sample';
+
+  if (analysis.type === 'drum_hit' && analysis.drumClass) {
+    return analysis.drumClass;
+  }
+
+  if (analysis.type === 'melodic') {
+    if (analysis.noteName) return analysis.noteName.replace(/\s+/g, '');
+    return 'melodic';
+  }
+
+  return 'sample';
+}
 
 export function useSlices() {
   const [slices, setSlices] = useState<Slice[]>([]);
@@ -33,19 +48,20 @@ export function useSlices() {
       const mapped: Slice[] = [];
       for (const file of incoming) {
         try {
-          const [duration, classification] = await Promise.all([
+          const [duration, analysis] = await Promise.all([
             probeDuration(file),
             classifyAudio(file)
           ]);
           const baseName = file.name.replace(/\.[^.]+$/, '');
           const ext = file.name.match(/\.[^.]+$/)?.[0] || '';
+          const prefix = formatNamePrefix(analysis);
           mapped.push({
             id: crypto.randomUUID(),
             file,
-            name: `${classification}_${baseName}${ext}`,
+            name: `${prefix}_${baseName}${ext}`,
             duration,
             status: 'ready',
-            classification
+            analysis
           });
         } catch (err) {
           console.error(err);
