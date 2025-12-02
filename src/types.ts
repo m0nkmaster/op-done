@@ -22,6 +22,10 @@ export type Slice = {
   status: SliceStatus;
   error?: string;
   analysis?: SampleAnalysis;
+  detectedNote?: string | null;
+  detectedFrequency?: number | null;
+  semitones?: number;
+  playableBlob?: Blob;
 };
 
 export type DrumMetadata = {

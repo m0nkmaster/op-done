@@ -37,9 +37,13 @@ export function useSlices() {
           const isAiff = /\.aiff?$/i.test(file.name);
           const playableBlob = isAiff ? await convertToWav(file) : file;
           
-          const [duration, analysis] = await Promise.all([
+          const [duration, analysis, pitch] = await Promise.all([
             probeDuration(playableBlob),
-            classifyAudio(playableBlob)
+            classifyAudio(playableBlob),
+            (async () => {
+              const { detectPitch } = await import('../audio/pitch');
+              return detectPitch(file);
+            })()
           ]);
           const baseName = file.name.replace(/\.[^.]+$/, '');
           const ext = file.name.match(/\.[^.]+$/)?.[0] || '';
@@ -51,7 +55,10 @@ export function useSlices() {
             name: `${prefix}_${baseName}${ext}`,
             duration,
             status: 'ready',
-            analysis
+            analysis,
+            detectedNote: pitch.note,
+            detectedFrequency: pitch.frequency,
+            semitones: 0
           });
         } catch (err) {
           console.error(err);
@@ -75,6 +82,10 @@ export function useSlices() {
     setSlices((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
+  const updateSlice = useCallback((id: string, updates: Partial<Slice>) => {
+    setSlices((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+  }, []);
+
   const reorder = useCallback((fromIdx: number, toIdx: number) => {
     setSlices((prev) => {
       const next = [...prev];
@@ -93,6 +104,7 @@ export function useSlices() {
     slices,
     addFiles,
     removeSlice,
+    updateSlice,
     reorder,
     reset,
     isProcessing,

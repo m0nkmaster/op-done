@@ -32,6 +32,8 @@ import { formatDuration } from './utils/audio';
 import type { Slice, DrumMetadata } from './types';
 import { buildDrumPack } from './audio/pack';
 import { TEBackground } from './components/TEBackground';
+import { PitchDial } from './components/PitchDial';
+import { semitonesToPitchParam } from './audio/pitch';
 
 function WaveformPreview({
   slice,
@@ -108,14 +110,16 @@ function SliceList({
   meta,
   onMetaChange,
   onPlay,
-  playingId
+  playingId,
+  onSemitonesChange
 }: {
   slices: Slice[];
   onRemove: (id: string) => void;
   meta: { volume: number[]; pitch: number[]; reverse: number[]; playmode: number[] };
   onMetaChange: (index: number, key: 'volume' | 'pitch' | 'reverse' | 'playmode', value: number) => void;
-  onPlay: (slice: Slice) => void;
+  onPlay: (slice: Slice, semitones?: number) => void;
   playingId: string | null;
+  onSemitonesChange: (id: string, semitones: number) => void;
 }) {
   if (!slices.length) {
     return (
@@ -142,7 +146,7 @@ function SliceList({
               />
             </Stack>
             <Stack direction="row" spacing={0.5} alignItems="center">
-              <IconButton size="small" onClick={() => onPlay(slice)} sx={{ bgcolor: playingId === slice.id ? 'primary.main' : 'transparent' }}>
+              <IconButton size="small" onClick={() => onPlay(slice, slice.semitones)} sx={{ bgcolor: playingId === slice.id ? 'primary.main' : 'transparent' }}>
                 <PlayArrowIcon fontSize="small" />
               </IconButton>
               <IconButton size="small" onClick={() => onRemove(slice.id)}>
@@ -161,13 +165,11 @@ function SliceList({
                 value={meta.volume[idx] ?? 8192}
                 onChange={(e) => onMetaChange(idx, 'volume', Number(e.target.value))}
               />
-              <TextField
-                size="small"
-                label="Pitch"
-                type="number"
-                inputProps={{ style: { width: 60 } }}
-                value={meta.pitch[idx] ?? 0}
-                onChange={(e) => onMetaChange(idx, 'pitch', Number(e.target.value))}
+              <PitchDial
+                detectedNote={slice.detectedNote ?? null}
+                detectedFrequency={slice.detectedFrequency ?? null}
+                semitones={slice.semitones ?? 0}
+                onChange={(st) => onSemitonesChange(slice.id, st)}
               />
               <Typography variant="caption" color="text.secondary" sx={{ minWidth: 40, textAlign: 'right' }}>
                 {formatDuration(slice.duration)}
@@ -185,6 +187,7 @@ function App() {
     slices,
     addFiles,
     removeSlice,
+    updateSlice,
     isProcessing,
     error,
     normalizeMode,
@@ -236,7 +239,7 @@ function App() {
     setPlayingId(null);
   };
 
-  const handlePlay = async (slice: Slice) => {
+  const handlePlay = async (slice: Slice, semitones = 0) => {
     try {
       if (playingId === slice.id) {
         stopAudio();
@@ -244,13 +247,20 @@ function App() {
       }
       stopAudio();
       const blob = slice.playableBlob || slice.file;
-      const url = URL.createObjectURL(blob);
-      audioUrlRef.current = url;
-      const audio = new Audio(url);
-      audioRef.current = audio;
+      const arrayBuffer = await blob.arrayBuffer();
+      const ac = new AudioContext();
+      const audioBuffer = await ac.decodeAudioData(arrayBuffer);
+      const source = ac.createBufferSource();
+      source.buffer = audioBuffer;
+      source.playbackRate.value = Math.pow(2, semitones / 12);
+      source.connect(ac.destination);
       setPlayingId(slice.id);
-      audio.onended = stopAudio;
-      await audio.play();
+      source.onended = () => {
+        ac.close();
+        stopAudio();
+      };
+      source.start();
+      audioRef.current = { pause: () => source.stop(), currentTime: 0 } as any;
     } catch (err) {
       console.error('Playback failed', err);
       stopAudio();
@@ -300,6 +310,13 @@ function App() {
     value: number
   ) => {
     setMetadata((prev) => updateMetadataArray(prev, key, index, value));
+  };
+
+  const handleSemitonesChange = (id: string, semitones: number) => {
+    const idx = slices.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    updateSlice(id, { semitones });
+    setMetadata(prev => updateMetadataArray(prev, 'pitch', idx, semitonesToPitchParam(semitones)));
   };
 
   return (
@@ -410,6 +427,7 @@ function App() {
                       onMetaChange={handleMetaArrayChange}
                       onPlay={handlePlay}
                       playingId={playingId}
+                      onSemitonesChange={handleSemitonesChange}
                     />
 
                     {(isProcessing || isExporting) && (
