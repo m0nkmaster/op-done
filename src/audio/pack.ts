@@ -44,5 +44,6 @@ export async function buildDrumPack(
     endFrames,
     options.metadata
   );
-  return new Blob([annotated.buffer], { type: 'audio/aiff' });
+  const buffer = annotated.buffer as ArrayBuffer;
+  return new Blob([buffer], { type: 'audio/aiff' });
 }
