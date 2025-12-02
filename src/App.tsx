@@ -41,7 +41,7 @@ function WaveformPreview({
   file,
   height = 60,
   width = 60,
-  color = '#cfcfcf'
+  color = '#1f1f1f'
 }: {
   file: File;
   height?: number;
@@ -71,7 +71,7 @@ function WaveformPreview({
         const buckets = Math.min(32, Math.max(8, Math.floor(w / 2)));
         const samplesPerBucket = Math.max(1, Math.floor(data.length / buckets));
         const mid = h / 2;
-        ctx.fillStyle = '#0f0f0f';
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
         ctx.fillStyle = color;
         const barWidth = Math.max(1, Math.floor(w / buckets) - 1);
