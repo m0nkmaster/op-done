@@ -65,7 +65,7 @@ type GeneratedSound = {
 };
 
 export function LlmSoundPage() {
-  const [prompt, setPrompt] = useState('Large snare with water on it');
+  const [prompt, setPrompt] = useState('Synth stab that feels like a curious squirrel');
   const [duration, setDuration] = useState(4);
   const [creativity, setCreativity] = useState(0.45);
   const [status, setStatus] = useState<'idle' | 'generating' | 'ready'>('idle');
@@ -141,7 +141,7 @@ export function LlmSoundPage() {
                   minRows={3}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  helperText="Examples: \"1980s style synth with reverb\", \"water-soaked snare with metallic ring\""
+                  helperText="Examples: \"1980s style synth with reverb\", \"water-soaked snare with metallic ring\", \"synth stab that makes you think of a squirrel\""
                 />
 
                 <Stack spacing={1}>

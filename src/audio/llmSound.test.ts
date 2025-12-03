@@ -31,4 +31,18 @@ describe('llmSound', () => {
     expect(riffHeader).toBe('RIFF');
     expect(wav.byteLength).toBe(44 + result.samples.length * 2);
   });
+
+  it('surfaces imagery tokens so unusual prompts steer the tone', () => {
+    const result = createLlmSound('synth stab that makes you think of a squirrel', 3.2, 0.7, () => 0.31);
+    expect(result.highlights.some((h) => h.toLowerCase().includes('squirrel'))).toBe(true);
+    expect(result.explanation.some((line) => line.toLowerCase().includes('imagery'))).toBe(true);
+  });
+
+  it('treats distinct imagery as different tonal pushes even with shared envelopes', () => {
+    const fixedRandom = () => 0.42;
+    const squirrel = buildToneProfile('synth stab inspired by squirrel gestures', 0.6, 3, fixedRandom).profile;
+    const glacier = buildToneProfile('synth stab inspired by glacier light', 0.6, 3, fixedRandom).profile;
+    expect(Math.abs(squirrel.baseFrequency - glacier.baseFrequency)).toBeGreaterThan(1);
+    expect(Math.abs(squirrel.noiseAmount - glacier.noiseAmount)).toBeGreaterThan(0);
+  });
 });
