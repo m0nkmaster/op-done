@@ -7,6 +7,7 @@ OP Done is a browser-based application for creating OP-Z drum sample packs. The 
 ## Stack
 
 - **UI Framework**: React 18 + TypeScript
+- **Routing**: React Router DOM v7
 - **Component Library**: Material-UI (MUI) v5
 - **Build Tool**: Vite
 - **Audio Processing**: ffmpeg.wasm (WebAssembly port of FFmpeg)
@@ -35,9 +36,12 @@ OP Done is a browser-based application for creating OP-Z drum sample packs. The 
 - Settings configuration
 - Validation and error display
 - Export orchestration
+- Navigation between tools
 
 **Key Files:**
-- `App.tsx`: Main application component, layout, event handlers
+- `App.tsx`: Layout shell with navigation
+- `pages/DrumCreator.tsx`: Drum kit creation tool
+- `pages/SampleAnalyzer.tsx`: OP-Z file visualization tool
 - `hooks/useSlices.ts`: Slice state management, file input handling
 - `components/TEBackground.tsx`: Visual branding
 - `theme.ts`: MUI theme customization
@@ -286,6 +290,7 @@ function buildNormalizationFilter(mode: NormalizeMode): string {
 
 ### Production
 - `react`, `react-dom`: UI framework
+- `react-router-dom`: Client-side routing
 - `@mui/material`, `@mui/icons-material`, `@emotion/react`, `@emotion/styled`: Component library
 - `@ffmpeg/ffmpeg`: Audio processing (WebAssembly)
 
@@ -297,7 +302,7 @@ function buildNormalizationFilter(mode: NormalizeMode): string {
 ### Rationale
 - **Minimal dependencies**: Easier maintenance, smaller bundle
 - **No state library**: React hooks sufficient for current scope
-- **No routing**: Single-page app
+- **Client-side routing**: React Router for multi-tool navigation
 - **No backend**: Client-side only
 
 ## Build Output

@@ -2,10 +2,9 @@ import { transcodeAndConcat } from './ffmpeg';
 import { injectDrumMetadata, parseAiff } from './aiff';
 import { calculateSliceBoundaries } from '../utils/opz';
 import { TARGET_SAMPLE_RATE } from '../constants';
-import type { DrumMetadata, NormalizeMode, Slice } from '../types';
+import type { DrumMetadata, Slice } from '../types';
 
 export type BuildPackOptions = {
-  normalizeMode: NormalizeMode;
   silenceThreshold: number;
   maxDuration: number;
   metadata: DrumMetadata;
@@ -22,7 +21,6 @@ export async function buildDrumPack(
   const durations = slices.map((s) => s.duration || 0);
   const { start: startFrames, end: endFrames } = calculateSliceBoundaries(
     durations,
-    TARGET_SAMPLE_RATE,
     numFrames
   );
 

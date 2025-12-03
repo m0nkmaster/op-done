@@ -6,7 +6,6 @@ Browser-based drum sample pack builder for Teenage Engineering OP-Z. Converts au
 
 - **24-slice drum packs**: Import up to 24 audio files (WAV, AIFF, MP3, M4A, FLAC)
 - **Automatic conversion**: Mono, 16-bit, 44.1 kHz AIFF with OP-Z drum metadata
-- **Normalization**: Loudness (LUFS), peak, or off with safety limiter
 - **Silence trimming**: Configurable leading-silence removal (-35 dB default)
 - **Duration enforcement**: 12-second pack limit with real-time validation
 - **Per-slice controls**: Volume, pitch, reverse, and playback preview
@@ -32,7 +31,7 @@ Open http://localhost:5173
 ## Usage
 
 1. **Add slices**: Drag/drop or select up to 24 audio files
-2. **Configure**: Choose normalization mode, adjust silence threshold
+2. **Configure**: Adjust silence threshold if needed
 3. **Customize**: Set per-slice volume, pitch, reverse; edit pack name/octave
 4. **Export**: Download `.aif` file when total duration ≤ 12s
 

@@ -13,6 +13,7 @@ export type AiffParseResult = {
   chunks: ChunkInfo[];
   numFrames: number;
   formSize: number;
+  sampleRate?: number;
 };
 
 function readString(buf: Uint8Array, offset: number, length: number): string {
@@ -57,13 +58,44 @@ export function parseAiff(buf: Uint8Array): AiffParseResult {
     buf.byteOffset + comm.offset,
     comm.size + 8
   );
-  const baseOffset = 8; // skip chunk id + size
-  if (comm.size < 14) {
-    throw new Error('Invalid COMM chunk');
+  // COMM chunk: offset 0-3 = "COMM", 4-7 = size, 8-9 = channels, 10-13 = numFrames
+  const numFrames = view.getUint32(10, false);
+  
+  // Parse sample rate from 80-bit extended float (bytes 16-25 from chunk start)
+  // COMM chunk: 0-3="COMM", 4-7=size, 8-9=channels, 10-13=numFrames, 14-15=sampleSize, 16-25=sampleRate
+  let sampleRate: number | undefined;
+  if (comm.size >= 18) {
+    const sampleRateBytes = new Uint8Array(
+      buf.buffer,
+      buf.byteOffset + comm.offset + 16,
+      10
+    );
+    // IEEE 80-bit extended float: sign (1 bit) + exponent (15 bits) + mantissa (64 bits)
+    const sign = (sampleRateBytes[0] & 0x80) ? -1 : 1;
+    const exponent = ((sampleRateBytes[0] & 0x7f) << 8) | sampleRateBytes[1];
+    const expValue = exponent - 16383; // bias
+    
+    // Extract mantissa (64 bits, stored as big-endian)
+    // Mantissa is stored as an integer, representing the fractional part
+    let mantissa = 0;
+    for (let i = 2; i < 10; i++) {
+      mantissa = mantissa * 256 + sampleRateBytes[i];
+    }
+    
+    // Convert mantissa to fraction: mantissa / 2^64
+    // Value = sign * (1 + mantissa/2^64) * 2^(exponent - 16383)
+    if (expValue >= -1022 && expValue <= 1023 && exponent !== 0) {
+      const mantissaFraction = mantissa / Math.pow(2, 64);
+      sampleRate = sign * (1 + mantissaFraction) * Math.pow(2, expValue);
+      // Round to nearest integer for common sample rates
+      sampleRate = Math.round(sampleRate);
+    } else if (exponent === 0 && mantissa === 0) {
+      // Zero value
+      sampleRate = 0;
+    }
   }
-  const numFrames = view.getUint32(baseOffset + 2, false);
 
-  return { chunks, numFrames, formSize };
+  return { chunks, numFrames, formSize, sampleRate };
 }
 
 function buildDrumMetadataChunk(
@@ -76,7 +108,7 @@ function buildDrumMetadataChunk(
   const positionsStart = encodePositions(start);
   const positionsEnd = encodePositions(end);
 
-  const payloadObj = {
+  const payloadObj: Record<string, unknown> = {
     drum_version: metadata.drumVersion,
     type: 'drum',
     name: metadata.name,
@@ -95,9 +127,18 @@ function buildDrumMetadataChunk(
     lfo_type: 'tremolo',
     lfo_params: [16000, 16000, 16000, 16000, 0, 0, 0, 0]
   };
+  
+  if (metadata.drumVersion >= 3) {
+    payloadObj.dyna_env = [0, 8192, 0, 0, 0, 0, 0, 0];
+    payloadObj.editable = true;
+    payloadObj.lfo_params = [0, 0, 0, 0, 0, 0, 0, 0];
+  }
 
   const jsonStr = JSON.stringify(payloadObj);
-  const payload = new TextEncoder().encode(`op-1${jsonStr}`);
+  const jsonBytes = new TextEncoder().encode(jsonStr);
+  const payload = new Uint8Array(4 + jsonBytes.length);
+  payload.set([0x6f, 0x70, 0x2d, 0x31], 0); // 'op-1'
+  payload.set(jsonBytes, 4);
   const pad = payload.length % 2 === 1 ? 1 : 0;
   const chunkSize = payload.length;
 

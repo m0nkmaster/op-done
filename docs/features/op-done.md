@@ -35,11 +35,11 @@ Utility app for preparing content for Teenage Engineering devices (starting with
 - [x] Download exported pack
 
 #### ✅ Processing
-- [x] Normalization modes: `loudnorm` (LUFS), `peak`, `off` (with limiter)
 - [x] Silence trimming: configurable threshold (default -35 dB)
 - [x] Duration enforcement: auto-trim to 12s max
 - [x] Metadata stripping during conversion
 - [x] Deterministic slice ordering
+- [x] Format conversion: mono 44.1 kHz 16-bit PCM
 
 #### ✅ Metadata
 - [x] OP-Z drum JSON format (`drum_version` 2 or 3)
@@ -84,13 +84,10 @@ Utility app for preparing content for Teenage Engineering devices (starting with
 - Supported formats: WAV, AIFF, MP3, M4A, FLAC.
 
 **Processing:**
-- Total pack duration must not exceed 12s; auto-trim or reject with guidance.
-- Normalization options:
-  - Default: loudness normalize (LUFS) with safety limiter (`loudnorm` + `alimiter`).
-  - Alternate: peak/limiter chain.
-  - Allow bypass only if user opts out (still enforce max level to avoid clipping).
-- Silence handling: optional leading-silence trim (default on) using -35 dB threshold.
+- Total pack duration must not exceed 12s; auto-trim with clear validation.
+- Silence handling: leading-silence trim using configurable threshold (default -35 dB).
 - File ordering: deterministic; support manual reorder via UI drag/drop + numeric sorting fallback.
+- Format conversion: mono 44.1 kHz 16-bit PCM AIFF.
 
 **Output:**
 - Format: `.aif` mono, 44.1 kHz, 16-bit PCM.
@@ -101,14 +98,13 @@ Utility app for preparing content for Teenage Engineering devices (starting with
 
 **Validation:**
 - Pre-check inputs: unreadable file, unsupported codec, >24 files, total estimated length >12s.
-- Processing errors: ffmpeg missing, conversion failure, clipping detected after normalization, write permission issues.
+- Processing errors: ffmpeg missing, conversion failure, write permission issues.
 - Import safety: confirm target path exists/created under `sample packs/<track>/<slot>/`; warn before overwriting an existing pack.
 - Provide actionable messages (what failed, how to fix, max duration reminder, supported formats).
 
 ### Configuration Surface (Exposed to User)
 
 **Implemented:**
-- Normalize mode (`loudnorm`, `peak`, `off`)
 - Silence threshold (dB)
 - Max duration (12s, read-only)
 - Pack name
@@ -119,7 +115,7 @@ Utility app for preparing content for Teenage Engineering devices (starting with
 **Planned:**
 - Output filename template
 - Track/slot destination picker
-- Advanced: LUFS/TP/LRA targets, silence threshold override
+- Per-slice normalization controls
 
 ### Non-Functional Requirements
 - Deterministic renders: same inputs + settings produce bit-identical output.
@@ -129,7 +125,7 @@ Utility app for preparing content for Teenage Engineering devices (starting with
 
 ### Testing & Verification
 - Unit/CLI tests for: format conversion, duration enforcement, slice ordering, metadata stripping, overwrite guard.
-- Golden sample fixtures covering: 24-slice max, silence-trim on/off, loudnorm vs peak modes, over-length rejection.
+- Golden sample fixtures covering: 24-slice max, silence-trim on/off, over-length rejection.
 - Manual QA checklist: import onto OP-Z via disk mode, verify pack loads and no files end up in `rejected/`.
 
 ---
@@ -140,7 +136,7 @@ Goal: convert a single audio source to an OP-Z synth sample slot (6s limit).
 
 **Requirements:**
 - Inputs: single file (WAV/AIFF/MP3/M4A/FLAC).
-- Processing: mono 44.1 kHz 16-bit AIFF, optional loudnorm/peak normalization, trim/loop to 6s.
+- Processing: mono 44.1 kHz 16-bit AIFF, trim/loop to 6s.
 - Output: one synth-format `.aif` placed in chosen track/slot; prevent multiple files per slot.
 - Metadata: OP-1 snapshot format with base frequency (440 Hz default for key A).
 - Validation: exactly 6s length to avoid "sample bleed" (buffer overflow playing unrelated audio).
