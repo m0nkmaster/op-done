@@ -129,7 +129,7 @@ export function LlmSoundPage() {
             <Stack spacing={0.5}>
               <Typography variant="h6" sx={{ color: 'text.secondary', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>Create sounds with LLM</Typography>
               <Typography variant="body2" color="text.secondary">
-                Describe the texture you want and let the embedded LLM guidance drive a local synth engine. Results are capped at six seconds and export as mono WAV.
+                Describe the texture you want and let the embedded LLM guidance drive a local synth engine. Every render introduces a little improvisation so results feel expressive; clips are capped at six seconds and export as mono WAV.
               </Typography>
             </Stack>
 

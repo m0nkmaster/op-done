@@ -30,15 +30,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function hashPrompt(prompt: string): number {
-  let hash = 2166136261;
-  for (let i = 0; i < prompt.length; i++) {
-    hash ^= prompt.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
 function mulberry32(seed: number): () => number {
   return () => {
     seed |= 0;
@@ -47,6 +38,27 @@ function mulberry32(seed: number): () => number {
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
+}
+
+function promptColor(prompt: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < prompt.length; i++) {
+    hash ^= prompt.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
+function createRandom(randomFn?: () => number): () => number {
+  if (randomFn) return randomFn;
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const buffer = new Uint32Array(1);
+    return () => {
+      crypto.getRandomValues(buffer);
+      return buffer[0] / 0xffffffff;
+    };
+  }
+  return Math.random;
 }
 
 function parseDescriptors(prompt: string): {
@@ -118,26 +130,34 @@ function parseDescriptors(prompt: string): {
   };
 }
 
-export function buildToneProfile(prompt: string, creativity: number, requestedDuration: number): { profile: ToneProfile; durationSeconds: number } {
+export function buildToneProfile(
+  prompt: string,
+  creativity: number,
+  requestedDuration: number,
+  randomFn?: () => number
+): { profile: ToneProfile; durationSeconds: number } {
   const normalizedPrompt = prompt.trim() || 'open-textured synth hit';
   const clampedCreativity = clamp(creativity, 0, 1);
   const descriptors = parseDescriptors(normalizedPrompt);
-  const seededRandom = mulberry32(hashPrompt(normalizedPrompt));
-  const drift = (seededRandom() - 0.5) * clampedCreativity;
+  const random = createRandom(randomFn);
+  const color = promptColor(normalizedPrompt);
+
+  const shimmerBend = (random() - 0.5) * (0.45 + clampedCreativity * 0.6);
+  const bodyWander = (random() - 0.5) * (0.3 + clampedCreativity * 0.5) + (color - 0.5) * 0.2;
 
   const durationSeconds = clamp(requestedDuration || 3, MIN_DURATION, MAX_DURATION);
-  const attack = 0.02 + clampedCreativity * 0.03;
-  const decay = 0.15 + clampedCreativity * 0.2;
-  const sustain = 0.55 - clampedCreativity * 0.1;
-  const release = 0.35 + clampedCreativity * 0.25;
+  const attack = 0.02 + clampedCreativity * 0.04 + Math.max(0, shimmerBend) * 0.02;
+  const decay = 0.16 + clampedCreativity * 0.22 + Math.abs(bodyWander) * 0.08;
+  const sustain = clamp(0.58 - clampedCreativity * 0.12 - Math.max(0, bodyWander) * 0.05, 0.35, 0.8);
+  const release = 0.34 + clampedCreativity * 0.27 + Math.max(0, shimmerBend) * 0.08;
 
   const profile: ToneProfile = {
-    baseFrequency: descriptors.baseFrequency * (1 + drift * 0.5),
-    metallicity: clamp(descriptors.metallicity + drift * 0.2, 0, 1),
-    noiseAmount: clamp(descriptors.noiseAmount + drift * 0.1, 0.05, 0.9),
-    shimmerAmount: clamp(descriptors.shimmerAmount + drift * 0.1, 0, 0.8),
-    waterAmount: clamp(descriptors.waterAmount + Math.abs(drift) * 0.1, 0, 0.8),
-    reverbMix: clamp(descriptors.reverbMix + Math.abs(drift) * 0.1, 0, 0.9),
+    baseFrequency: descriptors.baseFrequency * (1 + bodyWander * 0.5),
+    metallicity: clamp(descriptors.metallicity + shimmerBend * 0.25, 0, 1),
+    noiseAmount: clamp(descriptors.noiseAmount + bodyWander * 0.12 + Math.abs(shimmerBend) * 0.05, 0.05, 0.9),
+    shimmerAmount: clamp(descriptors.shimmerAmount + shimmerBend * 0.12 + color * 0.08, 0, 0.85),
+    waterAmount: clamp(descriptors.waterAmount + Math.abs(bodyWander) * 0.12, 0, 0.85),
+    reverbMix: clamp(descriptors.reverbMix + Math.abs(shimmerBend) * 0.12 + color * 0.05, 0, 0.95),
     attack,
     decay,
     sustain,
@@ -145,6 +165,9 @@ export function buildToneProfile(prompt: string, creativity: number, requestedDu
     creativity: clampedCreativity,
     highlights: descriptors.highlights
   };
+
+  if (Math.abs(shimmerBend) > 0.35) profile.highlights.push('improvised shimmer');
+  if (Math.abs(bodyWander) > 0.25) profile.highlights.push('wandering body tone');
 
   return { profile, durationSeconds };
 }
@@ -246,9 +269,15 @@ function buildExplanation(prompt: string, profile: ToneProfile, durationSeconds:
   return [primaryLine, secondaryLine];
 }
 
-export function createLlmSound(prompt: string, requestedDuration: number, creativity: number): LlmSound {
-  const { profile, durationSeconds } = buildToneProfile(prompt, creativity, requestedDuration);
-  const seed = hashPrompt(prompt) ^ Math.floor(creativity * 1000);
+export function createLlmSound(
+  prompt: string,
+  requestedDuration: number,
+  creativity: number,
+  randomFn?: () => number
+): LlmSound {
+  const random = createRandom(randomFn);
+  const { profile, durationSeconds } = buildToneProfile(prompt, creativity, requestedDuration, random);
+  const seed = Math.floor(random() * 0x7fffffff);
   const samples = synthesizeSample(profile, durationSeconds, SAMPLE_RATE, seed);
   const explanation = buildExplanation(prompt.trim() || 'open-textured synth hit', profile, durationSeconds);
   const highlights = profile.highlights.length ? profile.highlights : ['layered harmonics', 'textured noise'];

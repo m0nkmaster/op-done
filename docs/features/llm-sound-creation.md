@@ -2,8 +2,8 @@
 
 ## Overview
 - New React Router page at `/create-sound` for generating short WAV clips (≤6s) from natural-language prompts.
-- Uses `createLlmSound` in `src/audio/llmSound.ts` to translate prompts into deterministic synth parameters and render WAV bytes client-side.
-- No external LLM call is made today; the "LLM" naming refers to the prompt-driven parameter mapping that runs locally and deterministically.
+- Uses `createLlmSound` in `src/audio/llmSound.ts` to translate prompts into expressive synth parameters with stochastic nuance, then renders WAV bytes client-side.
+- The flow runs locally but intentionally introduces randomness per render so clips feel more emotional and exploratory rather than deterministic.
 - Presents waveform preview, designer-style explanation paragraphs, play/pause, and WAV download.
 
 ## Usage
