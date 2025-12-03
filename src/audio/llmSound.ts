@@ -5,19 +5,21 @@ const STOP_WORDS = new Set([
   'the', 'a', 'an', 'and', 'of', 'with', 'on', 'for', 'in', 'it', 'that', 'this', 'style', 'like', 'make', 'makes'
 ]);
 
+const MODEL_DIMS = { input: 16, hidden: 24, output: 3 };
+
 type ToneProfile = {
   baseFrequency: number;
-  metallicity: number;
+  bodyColor: number;
   noiseAmount: number;
   shimmerAmount: number;
-  waterAmount: number;
-  reverbMix: number;
+  spaceAmount: number;
   attack: number;
   decay: number;
   sustain: number;
   release: number;
   creativity: number;
   highlights: string[];
+  embedding: Float32Array;
 };
 
 type LlmSound = {
@@ -43,100 +45,6 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function promptColor(prompt: string): number {
-  let hash = 2166136261;
-  for (let i = 0; i < prompt.length; i++) {
-    hash ^= prompt.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0) / 4294967295;
-}
-
-function tokenize(prompt: string): string[] {
-  return prompt
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter((word) => word && !STOP_WORDS.has(word));
-}
-
-function imageryInfluence(prompt: string, creativity: number): {
-  frequencyTilt: number;
-  noiseLift: number;
-  shimmerLift: number;
-  highlights: string[];
-} {
-  const words = tokenize(prompt);
-  if (!words.length) {
-    return { frequencyTilt: 0, noiseLift: 0, shimmerLift: 0, highlights: [] };
-  }
-
-  const highlights: string[] = [];
-  let frequencyTilt = 0;
-  let noiseLift = 0;
-  let shimmerLift = 0;
-
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    const signature = promptColor(word) - 0.5; // -0.5 to 0.5
-    const energy = (Math.sin(signature * Math.PI * (i + 1)) + Math.cos(signature * Math.PI * 0.5)) * 0.5;
-
-    frequencyTilt += signature * 0.12;
-    noiseLift += energy * 0.06;
-    shimmerLift += (0.3 + creativity * 0.7) * signature * 0.08;
-
-    if (highlights.length < 4) {
-      highlights.push(`imagery spark: ${word}`);
-    }
-  }
-
-  const finalToken = words[words.length - 1];
-  if (!highlights.some((h) => h.includes(finalToken))) {
-    highlights.push(`imagery spark: ${finalToken}`);
-  }
-
-  return {
-    frequencyTilt: clamp(frequencyTilt, -0.35, 0.35),
-    noiseLift: clamp(noiseLift, -0.25, 0.25),
-    shimmerLift: clamp(shimmerLift, -0.25, 0.35),
-    highlights: highlights.slice(0, 5)
-  };
-}
-
-function gestureHint(prompt: string): {
-  attackBias: number;
-  sustainBias: number;
-  releaseBias: number;
-  highlights: string[];
-} {
-  const lower = prompt.toLowerCase();
-  const highlights: string[] = [];
-
-  let attackBias = 0;
-  let sustainBias = 0;
-  let releaseBias = 0;
-
-  if (lower.includes('stab') || lower.includes('hit') || lower.includes('squirrel')) {
-    attackBias -= 0.01;
-    releaseBias -= 0.08;
-    sustainBias -= 0.05;
-    highlights.push('nimble transient energy');
-  }
-
-  if (lower.includes('swell') || lower.includes('bloom') || lower.includes('drone')) {
-    attackBias += 0.02;
-    sustainBias += 0.12;
-    releaseBias += 0.06;
-    highlights.push('slow blooming tail');
-  }
-
-  if (lower.includes('reverb wash') || lower.includes('cathedral') || lower.includes('ambient')) {
-    sustainBias += 0.08;
-    releaseBias += 0.05;
-  }
-
-  return { attackBias, sustainBias, releaseBias, highlights };
-}
-
 function createRandom(randomFn?: () => number): () => number {
   if (randomFn) return randomFn;
   if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
@@ -149,80 +57,174 @@ function createRandom(randomFn?: () => number): () => number {
   return Math.random;
 }
 
-function parseDescriptors(prompt: string): {
-  baseFrequency: number;
-  metallicity: number;
-  noiseAmount: number;
-  shimmerAmount: number;
-  waterAmount: number;
-  reverbMix: number;
-  highlights: string[];
-} {
+function tokenize(prompt: string): string[] {
+  return prompt
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word && !STOP_WORDS.has(word));
+}
+
+function promptColor(prompt: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < prompt.length; i++) {
+    hash ^= prompt.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
+function embedPrompt(prompt: string, creativity: number): { embedding: Float32Array; imagery: string[] } {
+  const tokens = tokenize(prompt);
+  const dims = MODEL_DIMS.input;
+  const embedding = new Float32Array(dims);
+  const imagery: string[] = [];
+
+  if (!tokens.length) {
+    embedding[0] = 0.2 + creativity * 0.5;
+    return { embedding, imagery };
+  }
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    const base = promptColor(token) * 2 - 1;
+    const idx = (i * 3) % dims;
+    embedding[idx] += base * (0.6 + creativity * 0.4);
+    embedding[(idx + 1) % dims] += Math.sin(base * Math.PI) * 0.5;
+    embedding[(idx + 2) % dims] += Math.cos(base * Math.PI * 0.5) * 0.4;
+    if (imagery.length < 5) imagery.push(`imagery spark: ${token}`);
+  }
+
+  if (imagery.length < 5) {
+    const last = tokens[tokens.length - 1];
+    if (!imagery.some((item) => item.includes(last))) {
+      imagery.push(`imagery spark: ${last}`);
+    }
+  }
+
+  const norm = Math.max(1, Math.sqrt(embedding.reduce((acc, v) => acc + v * v, 0)));
+  for (let i = 0; i < embedding.length; i++) {
+    embedding[i] = (embedding[i] / norm) * (0.6 + creativity * 0.4);
+  }
+
+  return { embedding, imagery };
+}
+
+function gestureHints(prompt: string): { attackBias: number; releaseBias: number; sustainBias: number; highlights: string[] } {
   const lower = prompt.toLowerCase();
   const highlights: string[] = [];
+  let attackBias = 0;
+  let releaseBias = 0;
+  let sustainBias = 0;
 
-  let baseFrequency = 220;
-  if (lower.includes('kick')) {
-    baseFrequency = 60;
-    highlights.push('low kick fundamental');
-  } else if (lower.includes('snare')) {
-    baseFrequency = 180;
-    highlights.push('snare-like crack');
-  } else if (lower.includes('bass')) {
-    baseFrequency = 110;
-    highlights.push('bass foundation');
-  } else if (lower.includes('synth')) {
-    baseFrequency = 330;
-    highlights.push('synth voice lead');
-  } else if (lower.includes('pad')) {
-    baseFrequency = 240;
-    highlights.push('pad bed');
+  if (lower.includes('stab') || lower.includes('hit')) {
+    attackBias -= 0.02;
+    releaseBias -= 0.04;
+    highlights.push('punchy gesture');
   }
-
-  let metallicity = lower.includes('metal') || lower.includes('brass') ? 0.7 : 0.2;
-  let noiseAmount = lower.includes('noise') || lower.includes('snare') ? 0.6 : 0.25;
-  let shimmerAmount = lower.includes('reverb') || lower.includes('hall') ? 0.35 : 0.15;
-  let waterAmount = lower.includes('water') ? 0.6 : 0.15;
-  let reverbMix = lower.includes('reverb') ? 0.45 : 0.2;
-
-  if (lower.includes('dry')) {
-    reverbMix *= 0.35;
+  if (lower.includes('drone') || lower.includes('swell') || lower.includes('bloom')) {
+    attackBias += 0.03;
+    sustainBias += 0.18;
+    releaseBias += 0.08;
+    highlights.push('long swell');
+  }
+  if (lower.includes('ambient') || lower.includes('wash')) {
+    sustainBias += 0.06;
+    releaseBias += 0.05;
   }
 
-  if (lower.includes('stab') || lower.includes('pluck') || lower.includes('hit')) {
-    highlights.push('fast transient stab');
+  return { attackBias, releaseBias, sustainBias, highlights };
+}
+
+function initWeights(length: number, seed: number, scale: number): Float32Array {
+  const random = mulberry32(seed);
+  const weights = new Float32Array(length);
+  for (let i = 0; i < length; i++) {
+    weights[i] = (random() * 2 - 1) * scale;
   }
-  if (lower.includes('swell') || lower.includes('bloom') || lower.includes('wash')) {
-    highlights.push('slow swell texture');
+  return weights;
+}
+
+const MODEL_WEIGHTS = {
+  Wxh: initWeights(MODEL_DIMS.input * MODEL_DIMS.hidden, 1337, 0.35),
+  Whh: initWeights(MODEL_DIMS.hidden * MODEL_DIMS.hidden, 2333, 0.22),
+  Why: initWeights(MODEL_DIMS.hidden * MODEL_DIMS.output, 3777, 0.28),
+  bh: initWeights(MODEL_DIMS.hidden, 4661, 0.05),
+  by: initWeights(MODEL_DIMS.output, 8123, 0.1)
+};
+
+type NeuralControls = {
+  tone: Float32Array;
+  noise: Float32Array;
+  air: Float32Array;
+};
+
+function neuralStep(input: Float32Array, state: Float32Array, random: () => number): Float32Array {
+  const { hidden, input: inputSize } = MODEL_DIMS;
+  const next = new Float32Array(hidden);
+
+  for (let h = 0; h < hidden; h++) {
+    let sum = MODEL_WEIGHTS.bh[h] + (random() - 0.5) * 0.02;
+    for (let i = 0; i < inputSize; i++) {
+      sum += input[i] * MODEL_WEIGHTS.Wxh[h * inputSize + i];
+    }
+    for (let j = 0; j < hidden; j++) {
+      sum += state[j] * MODEL_WEIGHTS.Whh[h * hidden + j];
+    }
+    next[h] = Math.tanh(sum);
   }
 
-  if (lower.includes('crisp')) {
-    metallicity = clamp(metallicity + 0.2, 0, 1);
-    highlights.push('crisp transient');
-  }
-  if (lower.includes('warm')) {
-    metallicity = clamp(metallicity - 0.2, 0, 1);
-    reverbMix = clamp(reverbMix - 0.05, 0, 1);
-    highlights.push('warm tone');
-  }
-  if (lower.includes('airy')) {
-    noiseAmount = clamp(noiseAmount + 0.15, 0, 1);
-    highlights.push('airy layers');
-  }
-  if (lower.includes('analog')) {
-    shimmerAmount = clamp(shimmerAmount + 0.1, 0, 1);
-    highlights.push('analog wobble');
+  return next;
+}
+
+function runNeuralTexture(embedding: Float32Array, frames: number, random: () => number): NeuralControls {
+  const { hidden, output } = MODEL_DIMS;
+  const state = new Float32Array(hidden);
+  const tone = new Float32Array(frames);
+  const noise = new Float32Array(frames);
+  const air = new Float32Array(frames);
+  const input = new Float32Array(MODEL_DIMS.input);
+
+  for (let frame = 0; frame < frames; frame++) {
+    for (let i = 0; i < embedding.length; i++) {
+      const wobble = Math.sin((frame / frames) * Math.PI * (1 + i * 0.05));
+      input[i] = embedding[i] + wobble * 0.05 + (random() - 0.5) * 0.01;
+    }
+
+    const nextState = neuralStep(input, state, random);
+    state.set(nextState);
+
+    for (let o = 0; o < output; o++) {
+      let sum = MODEL_WEIGHTS.by[o];
+      for (let h = 0; h < hidden; h++) {
+        sum += state[h] * MODEL_WEIGHTS.Why[o * hidden + h];
+      }
+      const value = Math.tanh(sum);
+      if (o === 0) tone[frame] = value;
+      if (o === 1) noise[frame] = value;
+      if (o === 2) air[frame] = value;
+    }
   }
 
-  return {
-    baseFrequency,
-    metallicity,
-    noiseAmount,
-    shimmerAmount,
-    waterAmount,
-    reverbMix,
-    highlights
-  };
+  return { tone, noise, air };
+}
+
+function parseDescriptors(prompt: string): { base: number; bodyColor: number; highlights: string[] } {
+  const lower = prompt.toLowerCase();
+  const highlights: string[] = [];
+  let base = 220;
+  if (lower.includes('kick')) base = 60;
+  if (lower.includes('snare')) base = 170;
+  if (lower.includes('bass')) base = 110;
+  if (lower.includes('synth')) base = 330;
+  if (lower.includes('pad')) base = 240;
+
+  if (lower.includes('metal')) highlights.push('metal shine');
+  if (lower.includes('water')) highlights.push('water ripple');
+  if (lower.includes('squirrel')) highlights.push('playful imagery');
+
+  const bodyColor = promptColor(prompt) * 2 - 1;
+
+  return { base, bodyColor, highlights };
 }
 
 export function buildToneProfile(
@@ -233,38 +235,42 @@ export function buildToneProfile(
 ): { profile: ToneProfile; durationSeconds: number } {
   const normalizedPrompt = prompt.trim() || 'open-textured synth hit';
   const clampedCreativity = clamp(creativity, 0, 1);
-  const descriptors = parseDescriptors(normalizedPrompt);
-  const imagery = imageryInfluence(normalizedPrompt, clampedCreativity);
-  const gesture = gestureHint(normalizedPrompt);
   const random = createRandom(randomFn);
-  const color = promptColor(normalizedPrompt);
+  const { embedding, imagery } = embedPrompt(normalizedPrompt, clampedCreativity);
+  const { base, bodyColor, highlights: descriptorHighlights } = parseDescriptors(normalizedPrompt);
+  const gestures = gestureHints(normalizedPrompt);
+  const colorTilt = promptColor(normalizedPrompt) - 0.5;
 
-  const shimmerBend = (random() - 0.5) * (0.45 + clampedCreativity * 0.6);
-  const bodyWander = (random() - 0.5) * (0.3 + clampedCreativity * 0.5) + (color - 0.5) * 0.2;
+  const bodyWander = (random() - 0.5) * (0.4 + clampedCreativity * 0.6) + colorTilt * 0.2;
+  const shimmerBend = (random() - 0.5) * (0.3 + clampedCreativity * 0.5);
 
   const durationSeconds = clamp(requestedDuration || 3, MIN_DURATION, MAX_DURATION);
-  const attack = clamp(0.02 + clampedCreativity * 0.04 + Math.max(0, shimmerBend) * 0.02 + gesture.attackBias, 0.005, 0.18);
-  const decay = 0.16 + clampedCreativity * 0.22 + Math.abs(bodyWander) * 0.08;
-  const sustain = clamp(0.58 - clampedCreativity * 0.12 - Math.max(0, bodyWander) * 0.05 + gesture.sustainBias, 0.25, 0.85);
-  const release = clamp(0.34 + clampedCreativity * 0.27 + Math.max(0, shimmerBend) * 0.08 + gesture.releaseBias, 0.18, 1.2);
+  const attack = clamp(0.02 + clampedCreativity * 0.05 + gestures.attackBias, 0.005, 0.2);
+  const decay = 0.18 + clampedCreativity * 0.24;
+  const sustain = clamp(0.58 - clampedCreativity * 0.1 + gestures.sustainBias, 0.25, 0.9);
+  const release = clamp(0.34 + clampedCreativity * 0.3 + gestures.releaseBias, 0.18, 1.2);
+
+  const highlights = [
+    ...descriptorHighlights,
+    ...imagery,
+    ...gestures.highlights,
+    'neural timbre sculpting'
+  ];
 
   const profile: ToneProfile = {
-    baseFrequency: descriptors.baseFrequency * (1 + bodyWander * 0.5 + imagery.frequencyTilt * 0.8),
-    metallicity: clamp(descriptors.metallicity + shimmerBend * 0.25 + imagery.frequencyTilt * 0.2, 0, 1),
-    noiseAmount: clamp(descriptors.noiseAmount + bodyWander * 0.12 + Math.abs(shimmerBend) * 0.05 + imagery.noiseLift, 0.05, 0.9),
-    shimmerAmount: clamp(descriptors.shimmerAmount + shimmerBend * 0.12 + color * 0.08 + imagery.shimmerLift, 0, 0.85),
-    waterAmount: clamp(descriptors.waterAmount + Math.abs(bodyWander) * 0.12, 0, 0.85),
-    reverbMix: clamp(descriptors.reverbMix + Math.abs(shimmerBend) * 0.12 + color * 0.05, 0, 0.95),
+    baseFrequency: base * (1 + bodyWander * 0.4),
+    bodyColor,
+    noiseAmount: clamp(0.28 + Math.abs(bodyWander) * 0.25, 0.05, 0.95),
+    shimmerAmount: clamp(0.18 + shimmerBend * 0.4 + clampedCreativity * 0.3, 0, 0.95),
+    spaceAmount: clamp(0.22 + Math.abs(shimmerBend) * 0.25 + colorTilt * 0.15, 0, 0.95),
     attack,
     decay,
     sustain,
     release,
     creativity: clampedCreativity,
-    highlights: [...descriptors.highlights, ...imagery.highlights, ...gesture.highlights]
+    embedding,
+    highlights
   };
-
-  if (Math.abs(shimmerBend) > 0.35) profile.highlights.push('improvised shimmer');
-  if (Math.abs(bodyWander) > 0.25) profile.highlights.push('wandering body tone');
 
   return { profile, durationSeconds };
 }
@@ -281,38 +287,54 @@ function envelopeValue(t: number, duration: number, profile: ToneProfile): numbe
   return clamp((releaseTime / release) * sustain, 0, 1);
 }
 
-function synthesizeSample(profile: ToneProfile, durationSeconds: number, sampleRate: number, seed: number): Float32Array {
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+function renderNeuralSound(
+  profile: ToneProfile,
+  durationSeconds: number,
+  sampleRate: number,
+  controls: NeuralControls,
+  random: () => number
+): Float32Array {
   const totalSamples = Math.floor(durationSeconds * sampleRate);
   const output = new Float32Array(totalSamples);
-  const random = mulberry32(seed);
-  const lfoRate = 0.35 + profile.creativity * 0.6;
-  const shimmerRate = 4 + profile.shimmerAmount * 10;
-  const reverbDelay = Math.max(1, Math.floor(sampleRate * (0.015 + profile.reverbMix * 0.07)));
-  const reverbBuffer = new Float32Array(reverbDelay).fill(0);
-  const metallicSkew = profile.metallicity * 0.8 + 0.2;
+  const frameSize = 256;
+  const totalFrames = controls.tone.length;
+  const reverbDelay = Math.max(1, Math.floor(sampleRate * (0.02 + profile.spaceAmount * 0.1)));
+  const reverbBuffer = new Float32Array(reverbDelay);
 
   for (let i = 0; i < totalSamples; i++) {
     const t = i / sampleRate;
+    const framePos = (i / frameSize) % totalFrames;
+    const frameIndex = Math.floor(framePos);
+    const nextFrame = (frameIndex + 1) % totalFrames;
+    const frameT = framePos - frameIndex;
+
+    const tone = lerp(controls.tone[frameIndex], controls.tone[nextFrame], frameT);
+    const noise = lerp(controls.noise[frameIndex], controls.noise[nextFrame], frameT);
+    const air = lerp(controls.air[frameIndex], controls.air[nextFrame], frameT);
+
     const env = envelopeValue(t, durationSeconds, profile);
-    const vibrato = Math.sin(2 * Math.PI * lfoRate * t) * 3 * (0.4 + profile.creativity * 0.6);
-    const shimmer = Math.sin(2 * Math.PI * shimmerRate * t) * profile.shimmerAmount;
-    const harmonic = 2 * ((t * profile.baseFrequency + vibrato / 12) % 1) - 1;
-    const tone = (harmonic * metallicSkew + Math.sin(2 * Math.PI * profile.baseFrequency * t + vibrato)) / (1 + metallicSkew);
-    const waterRipple = Math.sin(2 * Math.PI * (0.9 + profile.waterAmount * 1.7) * t + shimmer) * profile.waterAmount * 0.5;
-    const noise = (random() * 2 - 1) * profile.noiseAmount * 0.7;
+    const pitch = profile.baseFrequency * (1 + tone * 0.35 + profile.bodyColor * 0.1);
+    const shimmer = Math.sin(2 * Math.PI * (4 + profile.shimmerAmount * 10) * t) * profile.shimmerAmount;
+    const harmonic = Math.sin(2 * Math.PI * pitch * t + shimmer);
+    const harsh = Math.sin(2 * Math.PI * pitch * 2 * t + Math.cos(t * 0.5)) * 0.4 * (0.5 + profile.shimmerAmount);
+    const texturedNoise = (random() * 2 - 1) * (0.35 + noise * 0.4 + profile.noiseAmount * 0.4);
+    const airy = Math.sin(2 * Math.PI * (0.7 + air * 0.5) * t) * 0.4 * (0.5 + profile.spaceAmount * 0.6);
 
-    const dry = (tone + noise + waterRipple) * env;
+    const dry = (harmonic + harsh + texturedNoise + airy) * env * 0.6;
     const reverbSample = reverbBuffer[i % reverbDelay];
-    const wet = dry + reverbSample * profile.reverbMix;
+    const wet = dry + reverbSample * (0.35 + profile.spaceAmount * 0.5);
+    reverbBuffer[i % reverbDelay] = dry + reverbSample * 0.4;
 
-    reverbBuffer[i % reverbDelay] = dry + reverbSample * 0.35;
     output[i] = wet;
   }
 
   let peak = 0;
   for (let i = 0; i < output.length; i++) {
-    const abs = Math.abs(output[i]);
-    if (abs > peak) peak = abs;
+    peak = Math.max(peak, Math.abs(output[i]));
   }
   const normalizer = peak > 0.99 ? 0.99 / peak : 1;
   if (normalizer !== 1) {
@@ -361,13 +383,14 @@ export function encodeWav(samples: Float32Array, sampleRate = SAMPLE_RATE): Uint
 }
 
 function buildExplanation(prompt: string, profile: ToneProfile, durationSeconds: number): string[] {
-  const primaryLine = `I interpreted "${prompt}" as a blend of ${profile.baseFrequency.toFixed(0)}Hz body with ${Math.round(profile.noiseAmount * 100)}% noise and ${Math.round(profile.reverbMix * 100)}% space.`;
-  const secondaryLine = `To capture that mood, I layered metallic overtones at ${Math.round(profile.metallicity * 100)}% intensity, water-like ripples, and a ${durationSeconds.toFixed(1)}s envelope so it breathes like a designed instrument.`;
-  const imageryLine = profile.highlights.find((h) => h.startsWith('imagery spark'));
-  const narrativeLine = imageryLine
-    ? `I leaned into the imagery of ${imageryLine.replace('imagery spark: ', '')} to push the timbre beyond obvious choices.`
-    : 'Each render nudges parameters with a bit of chance so repeated prompts still feel exploratory.';
-  return [primaryLine, secondaryLine, narrativeLine];
+  const primaryLine = `I let the embedded neural painter improvise around "${prompt}" with a ${durationSeconds.toFixed(1)}s envelope and ${Math.round(
+    profile.spaceAmount * 100
+  )}% space.`;
+  const textureLine = `Tone leans on a ${profile.baseFrequency.toFixed(0)}Hz body, ${Math.round(profile.noiseAmount * 100)}% textured noise, and shimmer pushed by learned gesture hints.`;
+  const narrativeLine = profile.highlights.find((h) => h.startsWith('imagery spark'))
+    ? `Imagery cues like ${profile.highlights.filter((h) => h.startsWith('imagery spark')).map((h) => h.replace('imagery spark: ', '')).join(', ')} steered the AI toward unexpected harmonics.`
+    : 'Each render is an on-device neural pass, so repeats feel like new performances while staying tied to your words.';
+  return [primaryLine, textureLine, narrativeLine];
 }
 
 export function createLlmSound(
@@ -378,10 +401,11 @@ export function createLlmSound(
 ): LlmSound {
   const random = createRandom(randomFn);
   const { profile, durationSeconds } = buildToneProfile(prompt, creativity, requestedDuration, random);
-  const seed = Math.floor(random() * 0x7fffffff);
-  const samples = synthesizeSample(profile, durationSeconds, SAMPLE_RATE, seed);
+  const frameCount = Math.max(32, Math.floor((durationSeconds * SAMPLE_RATE) / 256));
+  const controls = runNeuralTexture(profile.embedding, frameCount, random);
+  const samples = renderNeuralSound(profile, durationSeconds, SAMPLE_RATE, controls, random);
   const explanation = buildExplanation(prompt.trim() || 'open-textured synth hit', profile, durationSeconds);
-  const highlights = profile.highlights.length ? profile.highlights : ['layered harmonics', 'textured noise'];
+  const highlights = profile.highlights.length ? profile.highlights : ['neural timbre sculpting'];
 
   return {
     samples,

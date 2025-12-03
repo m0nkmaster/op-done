@@ -38,6 +38,11 @@ describe('llmSound', () => {
     expect(result.explanation.some((line) => line.toLowerCase().includes('imagery'))).toBe(true);
   });
 
+  it('explains that a neural model is driving the render', () => {
+    const result = createLlmSound('lush pad with neon fog', 2.5, 0.6, () => 0.12);
+    expect(result.explanation.join(' ').toLowerCase()).toContain('neural');
+  });
+
   it('treats distinct imagery as different tonal pushes even with shared envelopes', () => {
     const fixedRandom = () => 0.42;
     const squirrel = buildToneProfile('synth stab inspired by squirrel gestures', 0.6, 3, fixedRandom).profile;
