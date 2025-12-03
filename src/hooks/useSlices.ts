@@ -4,13 +4,13 @@ import { classifyAudio } from '../audio/classify';
 import { convertToWav } from '../audio/convert';
 import { formatNamePrefix } from '../utils/naming';
 import { MAX_SLICES, MAX_DURATION_SECONDS, DEFAULT_SILENCE_THRESHOLD } from '../constants';
-import type { Slice, NormalizeMode } from '../types';
+import type { Slice } from '../types';
 
 export function useSlices() {
   const [slices, setSlices] = useState<Slice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [normalizeMode, setNormalizeMode] = useState<NormalizeMode>('loudnorm');
+
   const [silenceThreshold, setSilenceThreshold] = useState(DEFAULT_SILENCE_THRESHOLD);
   const [maxDuration] = useState(MAX_DURATION_SECONDS);
 
@@ -109,11 +109,9 @@ export function useSlices() {
     reset,
     isProcessing,
     error,
-    normalizeMode,
     silenceThreshold,
     maxDuration,
     totalDuration,
-    setNormalizeMode,
     setSilenceThreshold
   };
 }
