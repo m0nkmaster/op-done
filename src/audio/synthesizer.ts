@@ -369,40 +369,24 @@ function applyLFO(ctx: OfflineAudioContext, input: AudioNode, config: SoundConfi
   if (delay > 0) {
     lfoGain.gain.setValueAtTime(0, delay);
     if (fade > 0) {
-      lfoGain.gain.linearRampToValueAtTime(lfo.depth, delay + fade);
+      lfoGain.gain.linearRampToValueAtTime(1, delay + fade);
     } else {
-      lfoGain.gain.setValueAtTime(lfo.depth, delay);
+      lfoGain.gain.setValueAtTime(1, delay);
     }
   } else if (fade > 0) {
-    lfoGain.gain.linearRampToValueAtTime(lfo.depth, fade);
+    lfoGain.gain.linearRampToValueAtTime(1, fade);
   } else {
-    lfoGain.gain.setValueAtTime(lfo.depth, 0);
+    lfoGain.gain.setValueAtTime(1, 0);
   }
   
   lfoSource.connect(lfoGain);
   lfoSource.start(0);
   
   switch (lfo.target) {
-    case 'pitch': {
-      const pitchGain = ctx.createGain();
-      pitchGain.gain.value = 100;
-      lfoGain.connect(pitchGain);
-      
-      for (const layer of config.synthesis.layers) {
-        if (layer.type === 'oscillator' && layer.oscillator) {
-          const detune = ctx.createConstantSource();
-          detune.offset.value = 0;
-          pitchGain.connect(detune.offset);
-          detune.start(0);
-        }
-      }
-      break;
-    }
-    
     case 'filter': {
       if (filter) {
         const filterGain = ctx.createGain();
-        filterGain.gain.value = filter.frequency.value * 0.5;
+        filterGain.gain.value = filter.frequency.value * lfo.depth;
         lfoGain.connect(filterGain);
         filterGain.connect(filter.frequency);
       }
@@ -411,7 +395,7 @@ function applyLFO(ctx: OfflineAudioContext, input: AudioNode, config: SoundConfi
     
     case 'amplitude': {
       const ampGain = ctx.createGain();
-      ampGain.gain.value = 0.5;
+      ampGain.gain.value = lfo.depth;
       lfoGain.connect(ampGain);
       
       const output = ctx.createGain();
@@ -423,8 +407,12 @@ function applyLFO(ctx: OfflineAudioContext, input: AudioNode, config: SoundConfi
     }
     
     case 'pan': {
+      const panGain = ctx.createGain();
+      panGain.gain.value = lfo.depth;
+      lfoGain.connect(panGain);
+      
       const panner = ctx.createStereoPanner();
-      lfoGain.connect(panner.pan);
+      panGain.connect(panner.pan);
       input.connect(panner);
       return panner;
     }

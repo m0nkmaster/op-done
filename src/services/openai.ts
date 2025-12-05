@@ -10,11 +10,19 @@ RECIPES:
 - Ride cymbal: [noise pink gain:0.4] + [sine 2.5kHz gain:0.4] + [sine 4.8kHz gain:0.3] + bandpass 3.5kHz Q:3 + reverb decay:2s mix:0.4 + attack:0.002 decay:0.8 sustain:0.4 release:1.5
 - Bass: [fm carrier:80 mod:160 index:30 gain:1] + lowpass 400Hz + distortion:0.4
 
+LFO GUIDELINES:
+- Depth: 0.8-1.0 for extreme, 0.5-0.7 for strong, 0.2-0.4 for subtle
+- Filter target: depth 0.7-1.0 for crazy sweeps/wobbles
+- Amplitude target: depth 0.5-0.9 for tremolo/gating
+- Pan target: depth 0.6-1.0 for auto-pan
+- Frequency: 0.5-4 Hz slow, 4-10 Hz rhythmic, 10-30 Hz fast wobble/siren, 30+ Hz extreme
+
 JSON schema:
 {
   "synthesis": { "layers": [{"type": "noise"|"oscillator"|"fm", "gain": 0.7, "noise": {"type": "white"}, "oscillator": {"waveform": "sine", "frequency": 200, "detune": 0}, "fm": {"carrier": 200, "modulator": 400, "modulationIndex": 30}}] },
   "envelope": { "attack": 0.001, "decay": 0.2, "sustain": 0.1, "release": 0.3, "attackCurve": "exponential", "releaseCurve": "exponential" },
   "filter": { "type": "lowpass", "frequency": 2000, "q": 2 },
+  "lfo": { "waveform": "sine"|"square"|"triangle"|"sawtooth"|"random", "frequency": 4, "depth": 0.7, "target": "filter"|"amplitude"|"pan", "phase": 0, "delay": 0, "fade": 0 },
   "effects": { "reverb": {"type": "room", "size": 0.7, "decay": 1.5, "damping": 0.5, "mix": 0.4, "predelay": 10} },
   "spatial": { "pan": 0, "width": 1 },
   "timing": { "duration": 1.5 },
@@ -23,7 +31,8 @@ JSON schema:
 }`;
 
 const ITERATION_CONTEXT = `
-When modifying existing config, apply MINIMAL changes to achieve the request. Return complete config with only necessary modifications.`;
+When modifying existing config, apply MINIMAL changes to achieve the request. Return complete config with only necessary modifications.
+For LFO requests: "crazy/extreme/super fast" = frequency 15-30 Hz + depth 0.8-1.0, "wobble/wub" = frequency 8-15 Hz + depth 0.7-1.0.`;
 
 export async function generateSoundConfig(
   description: string,

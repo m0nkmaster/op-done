@@ -118,6 +118,12 @@ export function SoundCreation() {
           placeholder={config ? 'e.g., Make it punchier with more attack' : 'e.g., Deep 808 kick with subtle distortion and reverb tail'}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              handleGenerate();
+            }
+          }}
           sx={{ mb: 2 }}
         />
         
