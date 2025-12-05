@@ -263,11 +263,11 @@ Table shows all 24 slots:
 
 ### Status: Experimental
 
-The Sound Creation tool uses AI to generate drum or synth sounds from text descriptions. This feature is currently experimental and requires an OpenAI API key.
+The Sound Creation tool uses AI to generate synthetic sounds from text descriptions. This feature is currently experimental and requires an OpenAI API key.
 
 ### How It Works
 
-1. Enter a text description (e.g., "Deep 808 kick with subtle distortion")
+1. Enter a text description (e.g., "Deep 808 kick", "Warm analog pad", "Metallic pluck")
 2. AI generates synthesis parameters
 3. Browser synthesizes audio using Web Audio API
 4. Preview and download as WAV

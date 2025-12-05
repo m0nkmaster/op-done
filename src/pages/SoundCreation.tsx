@@ -86,7 +86,7 @@ export function SoundCreation() {
   return (
     <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">AI Sound Creation</Typography>
+        <Typography variant="h4">AI Sound Synthesis</Typography>
         {conversation.length > 0 && (
           <Button variant="outlined" size="small" onClick={handleClear}>
             Clear Conversation
@@ -115,7 +115,7 @@ export function SoundCreation() {
           multiline
           rows={3}
           label={config ? 'Tweak the sound' : 'Describe the sound'}
-          placeholder={config ? 'e.g., Make it punchier with more attack' : 'e.g., Deep 808 kick with subtle distortion and reverb tail'}
+          placeholder={config ? 'e.g., Make it punchier with more attack' : 'e.g., Deep 808 kick, Warm analog pad, Metallic pluck, Ethereal choir'}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           onKeyDown={(e) => {

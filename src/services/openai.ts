@@ -1,6 +1,6 @@
 import type { SoundConfig } from '../types/soundConfig';
 
-const SYSTEM_PROMPT = `Expert audio synthesis. Create realistic sounds using LAYERED synthesis.
+const SYSTEM_PROMPT = `Expert audio synthesis. Create any sound (drums, bass, leads, pads, FX, etc.) using LAYERED synthesis. Return valid JSON.
 
 JSON schema:
 {
@@ -28,18 +28,14 @@ export async function generateSoundConfig(
     throw new Error('VITE_OPENAI_KEY environment variable not set');
   }
 
-  const messages = currentConfig
+  const input = currentConfig
     ? [
-        { role: 'system', content: SYSTEM_PROMPT + ITERATION_CONTEXT },
-        { role: 'assistant', content: JSON.stringify(currentConfig) },
-        { role: 'user', content: description },
+        { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: JSON.stringify(currentConfig) }] },
+        { type: 'message', role: 'user', content: [{ type: 'input_text', text: `${description}. Return json.` }] },
       ]
-    : [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: description },
-      ];
+    : `${description}. Return json.`;
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -47,8 +43,9 @@ export async function generateSoundConfig(
     },
     body: JSON.stringify({
       model: 'gpt-5.1',
-      messages,
-      response_format: { type: 'json_object' },
+      instructions: SYSTEM_PROMPT + (currentConfig ? ITERATION_CONTEXT : ''),
+      input,
+      text: { format: { type: 'json_object' } },
     }),
   });
 
@@ -59,7 +56,8 @@ export async function generateSoundConfig(
   }
 
   const data = await response.json();
-  const config = JSON.parse(data.choices[0].message.content);
+  const outputText = data.output.find((item: any) => item.type === 'message')?.content.find((c: any) => c.type === 'output_text')?.text;
+  const config = JSON.parse(outputText);
   
   // Ensure required fields
   if (!config.timing) config.timing = { duration: 1 };

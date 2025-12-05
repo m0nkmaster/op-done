@@ -21,7 +21,7 @@ Browser-based drum sample pack builder for Teenage Engineering OP-Z. Converts au
 - **Interactive playback**: Click slices to preview
 
 ### 🎹 Sound Creation (Experimental)
-- **AI-powered synthesis**: Generate drum sounds from text descriptions
+- **AI-powered synthesis**: Generate sound from text descriptions
 - **Web Audio synthesis**: Real-time audio generation in browser
 - **Customizable parameters**: Full control over synthesis engine
 - **Export to WAV**: Download generated sounds
@@ -53,7 +53,7 @@ Open http://localhost:5173
 
 ### Sound Creation
 
-1. **Describe**: Enter text description (e.g., "Deep 808 kick")
+1. **Describe**: Enter text description (e.g., "Deep 808 kick", "Warm analog pad", "Metallic pluck")
 2. **Generate**: AI creates synthesis parameters
 3. **Preview**: Listen to generated sound
 4. **Download**: Export as WAV file
