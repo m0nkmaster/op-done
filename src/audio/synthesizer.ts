@@ -1,5 +1,5 @@
 import type { SoundConfig } from '../types/soundConfig';
-import { SYNTHESIS, PINK_NOISE, WAVESHAPER_CURVE_SIZE } from '../config';
+import { SYNTHESIS, PINK_NOISE } from '../config';
 
 function safeValue(value: number, fallback = 0): number {
   return Number.isFinite(value) ? value : fallback;
