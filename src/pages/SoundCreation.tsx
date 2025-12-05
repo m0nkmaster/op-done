@@ -1,8 +1,14 @@
 import { useState } from 'react';
-import { Box, Button, TextField, Typography, Paper, CircularProgress, Alert } from '@mui/material';
+import { Box, Button, TextField, Typography, Paper, CircularProgress, Alert, Chip } from '@mui/material';
 import { generateSoundConfig } from '../services/openai';
 import { synthesizeSound } from '../audio/synthesizer';
 import type { SoundConfig } from '../types/soundConfig';
+
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  config?: SoundConfig;
+}
 
 export function SoundCreation() {
   const [description, setDescription] = useState('');
@@ -10,6 +16,7 @@ export function SoundCreation() {
   const [error, setError] = useState('');
   const [config, setConfig] = useState<SoundConfig | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
 
   const handleGenerate = async () => {
     if (!description) {
@@ -17,20 +24,40 @@ export function SoundCreation() {
       return;
     }
 
+    if (conversation.length >= 20) {
+      setError('Max 10 iterations reached. Clear conversation to start fresh.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     
     try {
-      const generatedConfig = await generateSoundConfig(description);
+      const generatedConfig = await generateSoundConfig(description, config || undefined);
       setConfig(generatedConfig);
       
       const buffer = await synthesizeSound(generatedConfig);
       setAudioBuffer(buffer);
+
+      setConversation(prev => [
+        ...prev,
+        { role: 'user', content: description },
+        { role: 'assistant', content: 'Generated', config: generatedConfig },
+      ]);
+      setDescription('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClear = () => {
+    setConversation([]);
+    setConfig(null);
+    setAudioBuffer(null);
+    setDescription('');
+    setError('');
   };
 
   const handlePlay = () => {
@@ -58,15 +85,37 @@ export function SoundCreation() {
 
   return (
     <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" gutterBottom>AI Sound Creation</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">AI Sound Creation</Typography>
+        {conversation.length > 0 && (
+          <Button variant="outlined" size="small" onClick={handleClear}>
+            Clear Conversation
+          </Button>
+        )}
+      </Box>
+
+      {conversation.length > 0 && (
+        <Paper sx={{ p: 2, mb: 3, maxHeight: 200, overflow: 'auto' }}>
+          <Typography variant="subtitle2" gutterBottom>Conversation</Typography>
+          {conversation.map((msg, i) => (
+            <Box key={i} sx={{ mb: 1 }}>
+              <Chip
+                label={msg.role === 'user' ? msg.content : 'Generated'}
+                size="small"
+                color={msg.role === 'user' ? 'primary' : 'success'}
+              />
+            </Box>
+          ))}
+        </Paper>
+      )}
       
       <Paper sx={{ p: 3, mb: 3 }}>
         <TextField
           fullWidth
           multiline
-          rows={4}
-          label="Describe the sound"
-          placeholder="e.g., Deep 808 kick with subtle distortion and reverb tail"
+          rows={3}
+          label={config ? 'Tweak the sound' : 'Describe the sound'}
+          placeholder={config ? 'e.g., Make it punchier with more attack' : 'e.g., Deep 808 kick with subtle distortion and reverb tail'}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           sx={{ mb: 2 }}
@@ -77,7 +126,7 @@ export function SoundCreation() {
           onClick={handleGenerate}
           disabled={loading || !description}
         >
-          {loading ? <CircularProgress size={24} /> : 'Generate Sound'}
+          {loading ? <CircularProgress size={24} /> : (config ? 'Tweak Sound' : 'Generate Sound')}
         </Button>
       </Paper>
 
@@ -85,7 +134,10 @@ export function SoundCreation() {
 
       {config && (
         <Paper sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>Generated Configuration</Typography>
+          <Typography variant="h6" gutterBottom>
+            {config.metadata.name}
+            <Chip label={`Iteration ${conversation.length / 2}`} size="small" sx={{ ml: 2 }} />
+          </Typography>
           <Box sx={{ mb: 2, maxHeight: 400, overflow: 'auto', bgcolor: '#1e1e1e', p: 2, borderRadius: 1 }}>
             <pre style={{ margin: 0, color: '#d4d4d4', fontSize: 12 }}>
               {JSON.stringify(config, null, 2)}

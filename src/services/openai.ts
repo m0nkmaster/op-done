@@ -22,13 +22,28 @@ JSON schema:
   "metadata": { "name": "Sound", "category": "snare", "description": "", "tags": [] }
 }`;
 
+const ITERATION_CONTEXT = `
+When modifying existing config, apply MINIMAL changes to achieve the request. Return complete config with only necessary modifications.`;
+
 export async function generateSoundConfig(
-  description: string
+  description: string,
+  currentConfig?: SoundConfig
 ): Promise<SoundConfig> {
   const apiKey = import.meta.env.VITE_OPENAI_KEY;
   if (!apiKey) {
     throw new Error('VITE_OPENAI_KEY environment variable not set');
   }
+
+  const messages = currentConfig
+    ? [
+        { role: 'system', content: SYSTEM_PROMPT + ITERATION_CONTEXT },
+        { role: 'assistant', content: JSON.stringify(currentConfig) },
+        { role: 'user', content: description },
+      ]
+    : [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: description },
+      ];
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -38,10 +53,7 @@ export async function generateSoundConfig(
     },
     body: JSON.stringify({
       model: 'gpt-5.1',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: description },
-      ],
+      messages,
       response_format: { type: 'json_object' },
     }),
   });
