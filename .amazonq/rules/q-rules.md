@@ -5,7 +5,7 @@
 Browser-based OP-Z drum pack builder. Converts audio files to OP-Z AIFF format with metadata.
 
 **Stack:** Vite + React + TypeScript + MUI + ffmpeg.wasm  
-**Runtime:** Bun (never npm/npx)
+**Runtime:** IMPORTANT use Bun (never npm/npx)
 
 ## Rules
 

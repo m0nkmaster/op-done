@@ -7,6 +7,7 @@ Utility app for preparing content for Teenage Engineering devices (starting with
 - DMX guide (context only): `docs/guides/how_to_dmx.txt`
 - Legacy conversion script: `legacy-scripts/to-opz.sh` (ffmpeg pipeline and defaults)
 - Legacy OP-1 Drum Utility app bundle: `legacy-scripts/OP-1 Drum Utility.app`
+- TE Operator existing utility: `https://teoperator.com/patch?audioURL=https%3A%2F%2Fwww.instagram.com%2Fp%2FCAluNy9lswZ%2F&secondsStart=0&secondsEnd=30&synthPatch=drum`
 
 ## Delivery Approach
 - **Web UI first** (runs locally in browser; no backend). Plan to wrap in Electron later with minimal changes.

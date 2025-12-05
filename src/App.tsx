@@ -40,6 +40,17 @@ function App() {
               >
                 Sample Analyzer
               </Button>
+              <Button
+                onClick={() => navigate('/sound-creation')}
+                sx={{
+                  color: location.pathname === '/sound-creation' ? '#ff6b35' : 'text.secondary',
+                  borderBottom: location.pathname === '/sound-creation' ? '2px solid #ff6b35' : 'none',
+                  borderRadius: 0,
+                  px: 2
+                }}
+              >
+                Sound Creation
+              </Button>
             </Box>
           </Toolbar>
         </AppBar>

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import App from './App';
 import { DrumCreator } from './pages/DrumCreator';
 import { SampleAnalyzer } from './pages/SampleAnalyzer';
+import { SoundCreation } from './pages/SoundCreation';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
           <Route index element={<Navigate to="/drum-creator" replace />} />
           <Route path="drum-creator" element={<DrumCreator />} />
           <Route path="sample-analyzer" element={<SampleAnalyzer />} />
+          <Route path="sound-creation" element={<SoundCreation />} />
         </Route>
       </Routes>
     </BrowserRouter>
