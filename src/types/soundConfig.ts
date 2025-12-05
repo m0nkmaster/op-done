@@ -16,6 +16,23 @@ export interface SoundConfig {
         attackCurve?: 'linear' | 'exponential';
         releaseCurve?: 'linear' | 'exponential';
       };
+      filter?: {
+        type: 'lowpass' | 'highpass' | 'bandpass' | 'notch';
+        frequency: number;
+        q: number;
+        envelope?: {
+          amount: number;
+          attack: number;
+          decay: number;
+          sustain: number;
+          release: number;
+        };
+      };
+      saturation?: {
+        type: 'soft' | 'hard' | 'tube' | 'tape';
+        drive: number;  // 0-10
+        mix: number;    // 0-1
+      };
       oscillator?: {
         waveform: 'sine' | 'square' | 'sawtooth' | 'triangle';
         frequency: number;
@@ -74,7 +91,8 @@ export interface SoundConfig {
     depth: number; // 0-1
     target: 'pitch' | 'filter' | 'amplitude' | 'pan';
     phase: number; // 0-1
-    sync: boolean;
+    delay?: number; // seconds before LFO starts
+    fade?: number; // seconds to fade in LFO
   };
 
   // Effects
@@ -180,6 +198,7 @@ export const DEFAULT_SOUND_CONFIG: SoundConfig = {
     attackCurve: 'exponential',
     releaseCurve: 'exponential',
   },
+  lfo: undefined,
   effects: {},
   spatial: {
     pan: 0,

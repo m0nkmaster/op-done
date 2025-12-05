@@ -17,15 +17,28 @@ export async function synthesizeSound(config: SoundConfig): Promise<AudioBuffer>
 
   for (const layer of config.synthesis.layers) {
     const source = createLayerSource(ctx, layer);
-    const layerGain = ctx.createGain();
+    let chain: AudioNode = source;
     
+    if (layer.filter) {
+      const layerFilter = createLayerFilter(ctx, layer.filter, config);
+      chain.connect(layerFilter);
+      chain = layerFilter;
+    }
+    
+    if (layer.saturation) {
+      const saturation = createSaturation(ctx, layer.saturation);
+      chain.connect(saturation);
+      chain = saturation;
+    }
+    
+    const layerGain = ctx.createGain();
     if (layer.envelope) {
       applyEnvelope(layerGain.gain, layer.envelope, config, safeValue(layer.gain, 1));
     } else {
       layerGain.gain.value = safeValue(layer.gain, 1);
     }
     
-    source.connect(layerGain);
+    chain.connect(layerGain);
     layerGain.connect(mixer);
     
     if ('start' in source && typeof source.start === 'function') {
@@ -55,8 +68,14 @@ export async function synthesizeSound(config: SoundConfig): Promise<AudioBuffer>
     masterGain.gain.value = config.dynamics.velocity;
   }
   
+  let outputChain: AudioNode = masterGain;
+  
+  if (config.lfo) {
+    outputChain = applyLFO(ctx, outputChain, config, filter);
+  }
+  
   const effectsChain = createEffects(ctx, config);
-  masterGain.connect(effectsChain);
+  outputChain.connect(effectsChain);
   effectsChain.connect(ctx.destination);
   
   sources.forEach(s => {
@@ -244,6 +263,175 @@ function applyFilterEnvelope(param: AudioParam, filter: NonNullable<SoundConfig[
   param.exponentialRampToValueAtTime(sustainFreq, safeAttack + safeDecay);
   param.setValueAtTime(sustainFreq, releaseStart);
   param.exponentialRampToValueAtTime(startFreq, duration);
+}
+
+function createLayerFilter(ctx: OfflineAudioContext, filterConfig: NonNullable<SoundConfig['synthesis']['layers'][0]['filter']>, config: SoundConfig): BiquadFilterNode {
+  const filter = ctx.createBiquadFilter();
+  filter.type = filterConfig.type;
+  filter.frequency.value = safeValue(filterConfig.frequency, 1000);
+  filter.Q.value = safeValue(filterConfig.q, 1);
+  
+  if (filterConfig.envelope) {
+    const env = filterConfig.envelope;
+    const baseFreq = filterConfig.frequency;
+    const amount = safeValue(env.amount, 0);
+    const sustainLevel = Math.max(0, Math.min(1, env.sustain));
+    const duration = config.timing.duration;
+    
+    const safeAttack = Math.max(0.001, env.attack);
+    const safeDecay = Math.max(0.001, env.decay);
+    const safeRelease = Math.max(0.001, env.release);
+    const releaseStart = Math.max(safeAttack + safeDecay, duration - safeRelease);
+    
+    const startFreq = Math.max(20, baseFreq);
+    const peakFreq = Math.max(20, Math.min(20000, baseFreq + amount));
+    const sustainFreq = Math.max(20, baseFreq + (amount * sustainLevel));
+    
+    filter.frequency.setValueAtTime(startFreq, 0);
+    filter.frequency.exponentialRampToValueAtTime(peakFreq, safeAttack);
+    filter.frequency.exponentialRampToValueAtTime(sustainFreq, safeAttack + safeDecay);
+    filter.frequency.setValueAtTime(sustainFreq, releaseStart);
+    filter.frequency.exponentialRampToValueAtTime(startFreq, duration);
+  }
+  
+  return filter;
+}
+
+function createSaturation(ctx: OfflineAudioContext, config: NonNullable<SoundConfig['synthesis']['layers'][0]['saturation']>): WaveShaperNode {
+  const shaper = ctx.createWaveShaper();
+  const curve = new Float32Array(SYNTHESIS.WAVESHAPER_CURVE_SIZE);
+  const drive = Math.max(0, Math.min(10, config.drive));
+  const mix = Math.max(0, Math.min(1, config.mix));
+  
+  for (let i = 0; i < SYNTHESIS.WAVESHAPER_CURVE_SIZE; i++) {
+    const x = (i - SYNTHESIS.WAVESHAPER_CURVE_SIZE / 2) / (SYNTHESIS.WAVESHAPER_CURVE_SIZE / 2);
+    let y: number;
+    
+    switch (config.type) {
+      case 'soft':
+        y = Math.tanh(x * drive);
+        break;
+      case 'hard':
+        y = Math.max(-1, Math.min(1, x * drive));
+        break;
+      case 'tube':
+        y = x < 0 ? Math.tanh(x * drive * 0.8) : Math.tanh(x * drive * 1.2);
+        break;
+      case 'tape':
+        y = Math.tanh(x * drive * 0.7);
+        break;
+      default:
+        y = Math.tanh(x * drive);
+    }
+    
+    curve[i] = x * (1 - mix) + y * mix;
+  }
+  
+  shaper.curve = curve;
+  return shaper;
+}
+
+function applyLFO(ctx: OfflineAudioContext, input: AudioNode, config: SoundConfig, filter: BiquadFilterNode | null): AudioNode {
+  const lfo = config.lfo!;
+  const duration = config.timing.duration;
+  const delay = lfo.delay || 0;
+  const fade = lfo.fade || 0;
+  
+  let lfoSource: AudioScheduledSourceNode;
+  
+  if (lfo.waveform === 'random') {
+    const bufferSize = ctx.sampleRate * duration;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    const samplesPerStep = Math.floor(ctx.sampleRate / (lfo.frequency * 10));
+    let currentValue = Math.random() * 2 - 1;
+    
+    for (let i = 0; i < bufferSize; i++) {
+      if (i % samplesPerStep === 0) {
+        currentValue = Math.random() * 2 - 1;
+      }
+      data[i] = currentValue;
+    }
+    
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    lfoSource = source;
+  } else {
+    const osc = ctx.createOscillator();
+    osc.type = lfo.waveform;
+    osc.frequency.value = safeValue(lfo.frequency, 1);
+    lfoSource = osc;
+  }
+  
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.setValueAtTime(0, 0);
+  
+  if (delay > 0) {
+    lfoGain.gain.setValueAtTime(0, delay);
+    if (fade > 0) {
+      lfoGain.gain.linearRampToValueAtTime(lfo.depth, delay + fade);
+    } else {
+      lfoGain.gain.setValueAtTime(lfo.depth, delay);
+    }
+  } else if (fade > 0) {
+    lfoGain.gain.linearRampToValueAtTime(lfo.depth, fade);
+  } else {
+    lfoGain.gain.setValueAtTime(lfo.depth, 0);
+  }
+  
+  lfoSource.connect(lfoGain);
+  lfoSource.start(0);
+  
+  switch (lfo.target) {
+    case 'pitch': {
+      const pitchGain = ctx.createGain();
+      pitchGain.gain.value = 100;
+      lfoGain.connect(pitchGain);
+      
+      for (const layer of config.synthesis.layers) {
+        if (layer.type === 'oscillator' && layer.oscillator) {
+          const freq = layer.oscillator.frequency;
+          const detune = ctx.createConstantSource();
+          detune.offset.value = 0;
+          pitchGain.connect(detune.offset);
+          detune.start(0);
+        }
+      }
+      break;
+    }
+    
+    case 'filter': {
+      if (filter) {
+        const filterGain = ctx.createGain();
+        filterGain.gain.value = filter.frequency.value * 0.5;
+        lfoGain.connect(filterGain);
+        filterGain.connect(filter.frequency);
+      }
+      break;
+    }
+    
+    case 'amplitude': {
+      const ampGain = ctx.createGain();
+      ampGain.gain.value = 0.5;
+      lfoGain.connect(ampGain);
+      
+      const output = ctx.createGain();
+      output.gain.value = 1;
+      ampGain.connect(output.gain);
+      
+      input.connect(output);
+      return output;
+    }
+    
+    case 'pan': {
+      const panner = ctx.createStereoPanner();
+      lfoGain.connect(panner.pan);
+      input.connect(panner);
+      return panner;
+    }
+  }
+  
+  return input;
 }
 
 function createEffects(ctx: OfflineAudioContext, config: SoundConfig): AudioNode {

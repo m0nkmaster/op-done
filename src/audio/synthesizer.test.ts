@@ -260,4 +260,123 @@ describe('synthesizeSound', () => {
     const buffer = await synthesizeSound(config);
     expect(buffer.length).toBeGreaterThan(0);
   });
+
+  it('should apply per-layer filter', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      synthesis: {
+        layers: [{
+          type: 'noise',
+          gain: 1,
+          noise: { type: 'white' },
+          filter: { type: 'highpass', frequency: 2000, q: 1 }
+        }]
+      }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should apply per-layer filter with envelope', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      synthesis: {
+        layers: [{
+          type: 'oscillator',
+          gain: 1,
+          oscillator: { waveform: 'sawtooth', frequency: 110, detune: 0 },
+          filter: {
+            type: 'lowpass',
+            frequency: 500,
+            q: 2,
+            envelope: { amount: 3000, attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 }
+          }
+        }]
+      }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should apply saturation', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      synthesis: {
+        layers: [{
+          type: 'oscillator',
+          gain: 1,
+          oscillator: { waveform: 'sine', frequency: 110, detune: 0 },
+          saturation: { type: 'soft', drive: 3, mix: 0.5 }
+        }]
+      }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should combine filter and saturation', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      synthesis: {
+        layers: [{
+          type: 'oscillator',
+          gain: 1,
+          oscillator: { waveform: 'sawtooth', frequency: 110, detune: 0 },
+          filter: { type: 'lowpass', frequency: 1000, q: 2 },
+          saturation: { type: 'tube', drive: 2, mix: 0.7 }
+        }]
+      }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should apply LFO to filter', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      filter: { type: 'lowpass', frequency: 1000, q: 2 },
+      lfo: { waveform: 'sine', frequency: 5, depth: 0.5, target: 'filter', phase: 0 }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should apply LFO to amplitude', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      lfo: { waveform: 'sine', frequency: 4, depth: 0.3, target: 'amplitude', phase: 0 }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should apply LFO to pan', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      lfo: { waveform: 'triangle', frequency: 2, depth: 0.8, target: 'pan', phase: 0 }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should apply LFO with delay and fade', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      timing: { duration: 2 },
+      lfo: { waveform: 'sine', frequency: 5, depth: 0.5, target: 'filter', phase: 0, delay: 0.5, fade: 0.3 },
+      filter: { type: 'lowpass', frequency: 1000, q: 2 }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should apply random LFO', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      filter: { type: 'lowpass', frequency: 1000, q: 2 },
+      lfo: { waveform: 'random', frequency: 10, depth: 0.6, target: 'filter', phase: 0 }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
 });
