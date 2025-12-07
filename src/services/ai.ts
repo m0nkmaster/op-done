@@ -56,11 +56,11 @@ function validateConfig(config: SoundConfig): void {
       layer.filter.frequency = Math.max(20, Math.min(20000, layer.filter.frequency));
     }
   });
-  
+
   if (config.filter?.frequency) {
     config.filter.frequency = Math.max(20, Math.min(20000, config.filter.frequency));
   }
-  
+
   const totalEnv = config.envelope.attack + config.envelope.decay + config.envelope.release;
   if (totalEnv > config.timing.duration) {
     const scale = config.timing.duration / totalEnv;
@@ -88,9 +88,9 @@ async function generateWithOpenAI(description: string, currentConfig?: SoundConf
 
   const input = currentConfig
     ? [
-        { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: JSON.stringify(currentConfig) }] },
-        { type: 'message', role: 'user', content: [{ type: 'input_text', text: `${description}. Return json.` }] },
-      ]
+      { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: JSON.stringify(currentConfig) }] },
+      { type: 'message', role: 'user', content: [{ type: 'input_text', text: `${description}. Return json.` }] },
+    ]
     : `${description}. Return json.`;
 
   const response = await fetch('https://api.openai.com/v1/responses', {
@@ -122,7 +122,7 @@ async function generateWithGemini(description: string, currentConfig?: SoundConf
   if (!apiKey) throw new Error('VITE_GEMINI_KEY not set');
 
   const ai = new GoogleGenAI({ apiKey });
-  
+
   const prompt = currentConfig
     ? `Current config:\n${JSON.stringify(currentConfig)}\n\n${ITERATION_CONTEXT}\n\nUser request: ${description}\n\nReturn complete updated JSON config.`
     : `${description}\n\nReturn JSON config.`;
@@ -136,9 +136,25 @@ async function generateWithGemini(description: string, currentConfig?: SoundConf
     },
   });
 
-  const text = response.text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  return JSON.parse(jsonMatch ? jsonMatch[0] : text);
+  let text: string | undefined;
+
+  // Handle different SDK response shapes safely
+  if (typeof (response as any).text === 'function') {
+    text = (response as any).text();
+  } else if (typeof response.text === 'string') {
+    text = response.text;
+  } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+    text = response.candidates[0].content.parts[0].text;
+  }
+
+  if (!text) {
+    console.error('Gemini Raw Response:', JSON.stringify(response, null, 2));
+    throw new Error('Gemini: No text generated. Content may be blocked by safety settings.');
+  }
+
+  const trimmed = text.trim();
+  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+  return JSON.parse(jsonMatch ? jsonMatch[0] : trimmed);
 }
 
 export async function generateSoundConfig(
@@ -149,7 +165,7 @@ export async function generateSoundConfig(
   const config = provider === 'openai'
     ? await generateWithOpenAI(description, currentConfig)
     : await generateWithGemini(description, currentConfig);
-  
+
   ensureDefaults(config);
   validateConfig(config);
   return config;
