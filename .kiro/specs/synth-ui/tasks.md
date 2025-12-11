@@ -74,31 +74,31 @@
     - Implement noise type selector
     - Implement gain control
     - _Requirements: 10.1, 10.2, 10.4_
-  - [-] 4.4 Create FMControls component
+  - [x] 4.4 Create FMControls component
     - Implement carrier frequency control
     - Implement modulator frequency control
     - Implement modulation index control
     - Implement gain control
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
-  - [ ] 4.5 Create KarplusStrongControls component
+  - [x] 4.5 Create KarplusStrongControls component
     - Implement frequency control
     - Implement damping control
     - Implement pluck location control
     - Implement gain control
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
-  - [ ] 4.6 Create LayerControls component with dynamic rendering
+  - [x] 4.6 Create LayerControls component with dynamic rendering
     - Render appropriate controls based on layer type
     - Implement layer envelope controls
     - Implement layer filter controls
     - Implement saturation controls
     - _Requirements: 1.3, 1.4, 10.3, 10.5_
-  - [ ] 4.7 Write property test for layer addition
+  - [x] 4.7 Write property test for layer addition
     - **Property 5: Layer Addition**
     - **Validates: Requirements 1.2**
-  - [ ] 4.8 Write property test for layer removal
+  - [x] 4.8 Write property test for layer removal
     - **Property 6: Layer Removal**
     - **Validates: Requirements 1.5**
-  - [ ] 4.9 Write property test for layer type controls
+  - [x] 4.9 Write property test for layer type controls
     - **Property 14: Layer Type Controls**
     - **Validates: Requirements 1.3**
 
@@ -121,20 +121,20 @@
     - Display basic error messages if synthesis fails
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 6. Implement global synthesis controls
-  - [ ] 6.1 Create GlobalEnvelopeControls component
+- [x] 6. Implement global synthesis controls
+  - [x] 6.1 Create GlobalEnvelopeControls component
     - Implement ADSR controls (attack, decay, sustain, release) using Knob components
     - Integrate EnvelopeVisualizer to display envelope curve
     - Wire up state updates to global envelope in SoundConfig
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
-  - [ ] 6.2 Create FilterPanel component
+  - [x] 6.2 Create FilterPanel component
     - Implement filter type selector using SegmentedButton
     - Implement cutoff and resonance controls using Knob components
     - Implement gain control for peaking filter
     - Implement filter envelope controls (ADSR + amount)
     - Wire up state updates to global filter in SoundConfig
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
-  - [ ] 6.3 Create LFOPanel component
+  - [x] 6.3 Create LFOPanel component
     - Implement LFO enable toggle using Switch
     - Implement waveform selector using SegmentedButton
     - Implement frequency and depth controls using Knob components
@@ -143,103 +143,104 @@
     - Wire up state updates to LFO in SoundConfig
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 7. Implement effects controls
-  - [ ] 7.1 Create EffectsPanel component structure
+- [x] 7. Implement effects controls
+  - [x] 7.1 Create EffectsPanel component structure
     - Create collapsible/expandable sections for each effect type
     - Each effect should have an enable toggle
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
-  - [ ] 7.2 Implement ReverbControls
+  - [x] 7.2 Implement ReverbControls
     - Implement decay, damping, and mix controls using Knob components
     - Wire up state updates to effects.reverb in SoundConfig
     - _Requirements: 5.1_
-  - [ ] 7.3 Implement DelayControls
+  - [x] 7.3 Implement DelayControls
     - Implement time, feedback, and mix controls using Knob components
     - Wire up state updates to effects.delay in SoundConfig
     - _Requirements: 5.2_
-  - [ ] 7.4 Implement DistortionControls
+  - [x] 7.4 Implement DistortionControls
     - Implement type selector using SegmentedButton
     - Implement amount and mix controls using Knob components
     - Wire up state updates to effects.distortion in SoundConfig
     - _Requirements: 5.3_
-  - [ ] 7.5 Implement CompressorControls
+  - [x] 7.5 Implement CompressorControls
     - Implement threshold, ratio, attack, release, and knee controls using Knob components
     - Wire up state updates to effects.compressor in SoundConfig
     - _Requirements: 5.4_
-  - [ ] 7.6 Implement GateControls
+  - [x] 7.6 Implement GateControls
     - Implement attack, hold, and release controls using Knob components
     - Wire up state updates to effects.gate in SoundConfig
     - _Requirements: 5.5_
 
-- [ ] 8. Implement metadata and export controls
-  - [ ] 8.1 Create MetadataPanel component
+- [x] 8. Implement metadata and export controls
+  - [x] 8.1 Create MetadataPanel component
     - Implement name input using TextField
     - Implement category selector using SegmentedButton or Select
     - Implement description input using TextField
     - Implement tags input with add/remove functionality
     - Wire up state updates to metadata in SoundConfig
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
-  - [ ] 8.2 Implement export functionality
+  - [x] 8.2 Implement export functionality
     - Create export button in PlaybackPanel or separate ExportPanel
     - Implement audio file generation using synthesizeSound
     - Implement download trigger using blob URL
     - Handle export errors with user-friendly messages
     - Use metadata name for filename
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
-  - [ ]* 8.3 Write property test for tag management
+  - [x] 8.3 Write property test for tag management
     - **Property 7: Tag Management**
     - **Validates: Requirements 13.4, 13.5**
-  - [ ]* 8.4 Write property test for synthesis success
+  - [x] 8.4 Write property test for synthesis success
     - **Property 8: Synthesis Success**
     - **Validates: Requirements 7.1**
-  - [ ]* 8.5 Write property test for export filename
+  - [x] 8.5 Write property test for export filename
     - **Property 9: Export Filename**
     - **Validates: Requirements 14.5**
-  - [ ]* 8.6 Write property test for discrete parameter updates
+  - [x] 8.6 Write property test for discrete parameter updates
     - **Property 13: Discrete Parameter Updates**
     - **Validates: Requirements 3.1, 4.1, 6.2, 6.4, 10.1, 13.2**
 
-- [ ] 9. Implement JSON editor integration
-  - [ ] 9.1 Integrate Monaco Editor or CodeMirror
-    - Add editor library dependency (e.g., @monaco-editor/react)
-    - Create JSONEditor component wrapper
-    - Configure syntax highlighting and validation
+- [x] 9. Implement JSON editor integration
+  - [x] 9.1 Add Monaco Editor dependency and create JSONEditor component
+    - Install @monaco-editor/react using bun
+    - Create JSONEditor component wrapper with syntax highlighting
+    - Configure JSON language mode and validation
     - _Requirements: 15.1_
-  - [ ] 9.2 Implement JSON-to-UI synchronization
-    - Parse JSON on change using validateSoundConfigJSON
-    - Update SoundConfig state if valid
-    - Trigger visual control updates via React state
-    - _Requirements: 15.2_
-  - [ ] 9.3 Implement UI-to-JSON synchronization
-    - Serialize SoundConfig to JSON on state change
-    - Update editor content with formatted JSON
-    - _Requirements: 15.3_
-  - [ ] 9.4 Implement validation error display
+  - [x] 9.2 Implement bidirectional JSON-UI synchronization
+    - Add JSON state derived from SoundConfig
+    - Parse JSON changes using validateSoundConfigJSON
+    - Update SoundConfig state when JSON is valid
+    - Serialize SoundConfig to JSON when UI controls change
+    - _Requirements: 15.2, 15.3_
+  - [x] 9.3 Implement validation error display
     - Show syntax errors with line/column info
     - Show schema validation errors
     - Show range validation warnings
     - Use existing validation utilities from src/utils/validation.ts
     - _Requirements: 15.4, 15.5_
-  - [ ] 9.5 Integrate JSON editor into SynthesizerUI page
-    - Add JSON editor panel to layout (side-by-side or tabbed)
-    - Wire up bidirectional synchronization
+  - [x] 9.4 Integrate JSON editor into SynthesizerUI layout
+    - Add collapsible JSON editor panel to the UI
+    - Wire up bidirectional synchronization handlers
+    - Add toggle button to show/hide JSON editor
     - _Requirements: 15.1, 15.2, 15.3_
-  - [ ]* 9.6 Write property test for JSON-to-UI synchronization
+  - [ ]* 9.5 Write property test for JSON-to-UI synchronization
     - **Property 2: JSON-to-UI Synchronization**
     - **Validates: Requirements 15.2**
-  - [ ]* 9.7 Write property test for UI-to-JSON synchronization
+  - [ ]* 9.6 Write property test for UI-to-JSON synchronization
     - **Property 3: UI-to-JSON Synchronization**
     - **Validates: Requirements 15.3**
 
-- [ ] 10. Polish and error handling
-  - [ ] 10.1 Implement error boundaries
-    - Add error boundary for synthesis errors
-    - Add error boundary for UI errors
-    - Display user-friendly error messages
+- [-] 10. Polish and error handling
+  - [x] 10.1 Implement error boundaries
+    - Create ErrorBoundary component for synthesis errors
+    - Wrap SynthesizerUI with error boundary
+    - Display user-friendly error messages with recovery options
     - _Requirements: 7.4, 14.4_
-  - [ ] 10.2 Add loading states and feedback
-    - Show loading indicator during synthesis
-    - Show loading indicator during export
-    - Add visual feedback for control interactions
+  - [x] 10.2 Enhance loading states and feedback
+    - Verify loading indicators work during synthesis
+    - Verify loading indicators work during export
+    - Add visual feedback for control interactions (hover states, active states)
+    - Test error display for synthesis and export failures
 
 - [ ] 11. Final checkpoint - Ensure all tests pass
-  - Ensure all tests pass, ask the user if questions arise.
+  - Run `bun test` to verify all tests pass
+  - Run `bun run lint` to verify code quality
+  - Ask the user if questions arise

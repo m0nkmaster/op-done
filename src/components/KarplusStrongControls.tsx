@@ -2,11 +2,12 @@ import { Box, Stack } from '@mui/material';
 import { Knob } from './Knob';
 import type { SoundConfig } from '../types/soundConfig';
 
-type KarplusStrongLayer = Extract<SoundConfig['synthesis']['layers'][0], { type: 'karplus-strong' }>;
+type Layer = SoundConfig['synthesis']['layers'][0];
+type KarplusConfig = NonNullable<Layer['karplus']>;
 
 export interface KarplusStrongControlsProps {
-  layer: KarplusStrongLayer;
-  onChange: (layer: KarplusStrongLayer) => void;
+  layer: Layer & { type: 'karplus-strong'; karplus: KarplusConfig };
+  onChange: (layer: Layer & { type: 'karplus-strong'; karplus: KarplusConfig }) => void;
 }
 
 export function KarplusStrongControls({ layer, onChange }: KarplusStrongControlsProps) {
@@ -42,7 +43,7 @@ export function KarplusStrongControls({ layer, onChange }: KarplusStrongControls
         />
         <Knob
           label="Pluck Loc"
-          value={karplus.pluckLocation || 0.5}
+          value={karplus.pluckLocation ?? 0.5}
           min={0}
           max={1}
           step={0.01}

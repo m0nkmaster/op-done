@@ -2,8 +2,7 @@ import { Box, Stack } from '@mui/material';
 import { Knob } from './Knob';
 import type { SoundConfig } from '../types/soundConfig';
 
-type Layer = SoundConfig['synthesis']['layers'][0];
-type FMLayer = Extract<Layer, { type: 'fm' }>;
+type FMLayer = Extract<SoundConfig['synthesis']['layers'][0], { type: 'fm' }>;
 
 export interface FMControlsProps {
   layer: FMLayer;
@@ -48,7 +47,7 @@ export function FMControls({ layer, onChange }: FMControlsProps) {
           value={fm.modulationIndex}
           min={0}
           max={1000}
-          step={0.1}
+          step={1}
           onChange={(modulationIndex) => updateFM({ modulationIndex })}
         />
       </Box>
