@@ -10,7 +10,7 @@
   - **Property 1: Node creation produces valid nodes**
   - **Validates: Requirements 1.1, 1.2, 1.5**
 
-- [-] 2. Implement canvas rendering system
+- [x] 2. Implement canvas rendering system
   - Set up HTML5 Canvas with proper sizing and scaling
   - Implement grid background rendering
   - Create node rendering function with type labels, parameters, and connection points
@@ -18,7 +18,7 @@
   - Add selection highlighting (glow effect, thicker border)
   - _Requirements: 1.3, 4.2, 8.1, 8.3_
 
-- [-] 2.1 Write property test for node rendering
+- [x] 2.1 Write property test for node rendering
   - **Property 2: Node rendering completeness**
   - **Validates: Requirements 1.3**
 
