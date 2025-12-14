@@ -28,8 +28,9 @@ function writeUInt32BE(buf: Uint8Array, offset: number, value: number) {
 }
 
 export function parseAiff(buf: Uint8Array): AiffParseResult {
-  if (readString(buf, 0, 4) !== 'FORM' || readString(buf, 8, 4) !== 'AIFF') {
-    throw new Error('Invalid AIFF header');
+  const type = readString(buf, 8, 4);
+  if (readString(buf, 0, 4) !== 'FORM' || (type !== 'AIFF' && type !== 'AIFC')) {
+    throw new Error('Invalid AIFF/AIFC header');
   }
 
   const formSize =
@@ -60,7 +61,7 @@ export function parseAiff(buf: Uint8Array): AiffParseResult {
   );
   // COMM chunk: offset 0-3 = "COMM", 4-7 = size, 8-9 = channels, 10-13 = numFrames
   const numFrames = view.getUint32(10, false);
-  
+
   // Parse sample rate from 80-bit extended float (bytes 16-25 from chunk start)
   // COMM chunk: 0-3="COMM", 4-7=size, 8-9=channels, 10-13=numFrames, 14-15=sampleSize, 16-25=sampleRate
   let sampleRate: number | undefined;
@@ -74,14 +75,14 @@ export function parseAiff(buf: Uint8Array): AiffParseResult {
     const sign = (sampleRateBytes[0] & 0x80) ? -1 : 1;
     const exponent = ((sampleRateBytes[0] & 0x7f) << 8) | sampleRateBytes[1];
     const expValue = exponent - 16383; // bias
-    
+
     // Extract mantissa (64 bits, stored as big-endian)
     // Mantissa is stored as an integer, representing the fractional part
     let mantissa = 0;
     for (let i = 2; i < 10; i++) {
       mantissa = mantissa * 256 + sampleRateBytes[i];
     }
-    
+
     // Convert mantissa to fraction: mantissa / 2^64
     // Value = sign * (1 + mantissa/2^64) * 2^(exponent - 16383)
     if (expValue >= -1022 && expValue <= 1023 && exponent !== 0) {
@@ -101,22 +102,29 @@ export function parseAiff(buf: Uint8Array): AiffParseResult {
 function buildDrumMetadataChunk(
   startFrames: number[],
   endFrames: number[],
-  metadata: DrumMetadata
+  metadata: DrumMetadata,
+  format?: 'aiff' | 'aifc'
 ): Uint8Array {
   const start = padArray(startFrames, MAX_SLICES, 0);
   const end = padArray(endFrames, MAX_SLICES, 0);
   const positionsStart = encodePositions(start);
   const positionsEnd = encodePositions(end);
 
+  const drumVersion = format === 'aifc' ? 2 : metadata.drumVersion;
+  
+  // Field order must match TE official format exactly:
+  // drum_version, type, name, start, end, octave, pitch, playmode, reverse, volume, dyna_env, fx_*, lfo_*
   const payloadObj: Record<string, unknown> = {
-    drum_version: metadata.drumVersion,
+    drum_version: drumVersion,
     type: 'drum',
-    name: metadata.name,
-    octave: metadata.octave,
-    pitch: padArray(metadata.pitch ?? [], MAX_SLICES, OPZ_DEFAULTS.PITCH),
+    name: metadata.name || 'op-done', // TE utility requires non-empty name
     start: positionsStart,
     end: positionsEnd,
-    playmode: padArray(metadata.playmode ?? [], MAX_SLICES, OPZ_DEFAULTS.PLAYMODE),
+    octave: metadata.octave,
+    pitch: padArray(metadata.pitch ?? [], MAX_SLICES, OPZ_DEFAULTS.PITCH),
+    playmode: format === 'aifc' 
+      ? Array(MAX_SLICES).fill(OPZ_DEFAULTS.PLAYMODE)
+      : padArray(metadata.playmode ?? [], MAX_SLICES, OPZ_DEFAULTS.PLAYMODE),
     reverse: padArray(metadata.reverse ?? [], MAX_SLICES, OPZ_DEFAULTS.REVERSE),
     volume: padArray(metadata.volume ?? [], MAX_SLICES, OPZ_DEFAULTS.VOLUME),
     dyna_env: [0, 8192, 0, 8192, 0, 0, 0, 0],
@@ -127,8 +135,8 @@ function buildDrumMetadataChunk(
     lfo_type: 'tremolo',
     lfo_params: [16000, 16000, 16000, 16000, 0, 0, 0, 0]
   };
-  
-  if (metadata.drumVersion >= 3) {
+
+  if (format !== 'aifc' && metadata.drumVersion >= 3) {
     payloadObj.dyna_env = [0, 8192, 0, 0, 0, 0, 0, 0];
     payloadObj.editable = true;
     payloadObj.lfo_params = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -136,17 +144,22 @@ function buildDrumMetadataChunk(
 
   const jsonStr = JSON.stringify(payloadObj);
   const jsonBytes = new TextEncoder().encode(jsonStr);
-  const payload = new Uint8Array(4 + jsonBytes.length);
+  
+  // TE format: 'op-1' + JSON + null terminator + padding to even size
+  // The chunk size must be even for TE utility compatibility
+  const baseSize = 4 + jsonBytes.length + 1; // op-1 + json + null
+  const paddedSize = baseSize % 2 === 0 ? baseSize : baseSize + 1;
+  
+  const payload = new Uint8Array(paddedSize);
   payload.set([0x6f, 0x70, 0x2d, 0x31], 0); // 'op-1'
   payload.set(jsonBytes, 4);
-  const pad = payload.length % 2 === 1 ? 1 : 0;
-  const chunkSize = payload.length;
+  payload[4 + jsonBytes.length] = 0; // null terminator
+  // Remaining bytes are already 0 (padding)
 
-  const chunk = new Uint8Array(8 + chunkSize + pad);
+  const chunk = new Uint8Array(8 + paddedSize);
   chunk.set([0x41, 0x50, 0x50, 0x4c], 0); // 'APPL'
-  writeUInt32BE(chunk, 4, chunkSize);
+  writeUInt32BE(chunk, 4, paddedSize);
   chunk.set(payload, 8);
-  if (pad) chunk[8 + chunkSize] = 0;
 
   return chunk;
 }
@@ -155,7 +168,8 @@ export function injectDrumMetadata(
   aiff: Uint8Array,
   startFrames: number[],
   endFrames: number[],
-  metadata: DrumMetadata
+  metadata: DrumMetadata,
+  format?: 'aiff' | 'aifc'
 ): Uint8Array {
   const { chunks, formSize } = parseAiff(aiff);
   const ssndChunk = chunks.find((c) => c.id === 'SSND');
@@ -164,7 +178,8 @@ export function injectDrumMetadata(
   const metadataChunk = buildDrumMetadataChunk(
     startFrames,
     endFrames,
-    metadata
+    metadata,
+    format
   );
 
   const result = new Uint8Array(aiff.length + metadataChunk.length);

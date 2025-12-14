@@ -11,32 +11,39 @@ export const encodePositions = (frames: number[]): number[] =>
 export const decodePositions = (encoded: number[]): number[] =>
   encoded.map((val) => Math.round(val / OP1_SCALE));
 
-/** Calculates slice boundaries from durations and total frames */
+/**
+ * Calculates slice boundaries from frame counts.
+ *
+ * OP-Z/OP-1 slice format uses EXCLUSIVE end positions:
+ * - Slice plays frames from start to end-1 (like Python range)
+ * - End of slice N equals start of slice N+1 (no gaps)
+ * - Total coverage: sum of all slice frame counts
+ *
+ * Example: sliceFrames = [2200, 3460]
+ * - Slice 1: start=0, end=2200 → plays frames 0..2199
+ * - Slice 2: start=2200, end=5660 → plays frames 2200..5659
+ */
 export const calculateSliceBoundaries = (
-  durations: number[],
-  totalFrames: number
+  sliceFrames: number[]
 ): { start: number[]; end: number[] } => {
-  const gapDuration = 0.01;
-  const totalDuration = durations.reduce((sum, d) => sum + (d > 0 ? d + gapDuration : 0), 0);
-  const sampleRate = totalDuration > 0 ? totalFrames / totalDuration : 44100;
   const start: number[] = [];
   const end: number[] = [];
 
   let cursor = 0;
   for (let i = 0; i < MAX_SLICES; i++) {
-    const duration = durations[i] ?? 0;
-    if (duration === 0) {
+    const frames = sliceFrames[i] ?? 0;
+
+    if (frames === 0) {
+      // Empty slice: TE uses 0,0 for unused slices
+      start.push(0);
+      end.push(0);
+    } else {
       start.push(cursor);
-      end.push(cursor);
-      continue;
+      // End is EXCLUSIVE (like Python range)
+      // No safety buffer - match TE format exactly
+      end.push(cursor + frames);
+      cursor += frames;
     }
-    const sliceLen = duration * sampleRate;
-    const gapLen = gapDuration * sampleRate;
-    const totalLen = sliceLen + gapLen;
-    const clampedLen = Math.max(0, Math.min(totalLen, totalFrames - cursor));
-    start.push(cursor);
-    end.push(cursor + Math.min(sliceLen, clampedLen) - 1);
-    cursor += clampedLen;
   }
 
   return { start, end };

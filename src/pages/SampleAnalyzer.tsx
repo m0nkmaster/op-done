@@ -42,7 +42,18 @@ export function SampleAnalyzer() {
       const applData = uint8.slice(applChunk.offset + 8, applChunk.offset + 8 + applChunk.size);
       const text = new TextDecoder().decode(applData);
       if (!text.startsWith('op-1')) throw new Error('Invalid APPL chunk format');
-      const json = JSON.parse(text.slice(4));
+      // Find the end of the JSON (first closing brace at depth 0)
+      const jsonText = text.slice(4);
+      // Remove any trailing null bytes or garbage
+      const cleanJson = jsonText.replace(/\0.*$/, '').trim();
+      let json;
+      try {
+        json = JSON.parse(cleanJson);
+      } catch (e) {
+        console.error('JSON parse error. Raw text:', jsonText);
+        console.error('Cleaned text:', cleanJson);
+        throw new Error(`Invalid JSON in APPL chunk: ${(e as Error).message}`);
+      }
       const startFrames = decodePositions(json.start);
       const endFrames = decodePositions(json.end);
       
@@ -112,20 +123,26 @@ export function SampleAnalyzer() {
     const w = canvas.width;
     const h = canvas.height;
     const data = audioBuffer.getChannelData(0);
-    // Use original frame count for position calculation to match metadata
+    // Use original frame count for BOTH waveform and markers to ensure alignment
+    // The metadata positions are relative to the original AIFF frame count
     const frameCount = originalNumFrames ?? data.length;
-    const samplesPerPixel = data.length / w;
+    // Scale factor to map audio buffer samples to original frame positions
+    const bufferToFrameScale = frameCount / data.length;
     
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, w, h);
     
     ctx.fillStyle = '#ff6b35';
     const mid = h / 2;
+    const samplesPerPixel = frameCount / w; // Use frameCount for consistent scaling
     for (let x = 0; x < w; x++) {
-      const start = Math.floor(x * samplesPerPixel);
-      const end = Math.floor((x + 1) * samplesPerPixel);
+      // Map pixel position to frame position, then to buffer position
+      const frameStart = Math.floor(x * samplesPerPixel);
+      const frameEnd = Math.floor((x + 1) * samplesPerPixel);
+      const bufferStart = Math.floor(frameStart / bufferToFrameScale);
+      const bufferEnd = Math.floor(frameEnd / bufferToFrameScale);
       let min = 1, max = -1;
-      for (let i = start; i < end && i < data.length; i++) {
+      for (let i = bufferStart; i < bufferEnd && i < data.length; i++) {
         const v = data[i];
         if (v < min) min = v;
         if (v > max) max = v;

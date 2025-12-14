@@ -4,9 +4,9 @@ import { calculateSliceBoundaries } from '../utils/opz';
 import type { DrumMetadata, Slice } from '../types';
 
 export type BuildPackOptions = {
-  silenceThreshold: number;
   maxDuration: number;
   metadata: DrumMetadata;
+  format?: 'aiff' | 'aifc'; // Optional format parameter (defaults to aiff)
 };
 
 export async function buildDrumPack(
@@ -14,21 +14,29 @@ export async function buildDrumPack(
   options: BuildPackOptions
 ): Promise<Blob> {
   const files = slices.map((s) => s.file);
-  const data = await transcodeAndConcat(files, options);
-  const { numFrames } = parseAiff(data);
+  // frames are the actual frame counts of each input WAV file
+  const { data, frames: sliceFrames } = await transcodeAndConcat(files, { 
+    format: options.format 
+  });
 
-  const durations = slices.map((s) => s.duration || 0);
+  // Validate output file structure
+  parseAiff(data);
+
+  // Calculate slice boundaries from frame counts
+  // Uses TE format: exclusive end positions, no gaps
   const { start: startFrames, end: endFrames } = calculateSliceBoundaries(
-    durations,
-    numFrames
+    sliceFrames
   );
 
   const annotated = injectDrumMetadata(
     data,
     startFrames,
     endFrames,
-    options.metadata
+    options.metadata,
+    options.format
   );
   const buffer = annotated.buffer as ArrayBuffer;
-  return new Blob([buffer], { type: 'audio/aiff' });
+  // Use the appropriate MIME type based on the format
+  const mimeType = options.format === 'aifc' ? 'audio/x-aifc' : 'audio/aiff';
+  return new Blob([buffer], { type: mimeType });
 }

@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, test } from 'vitest';
+import fc from 'fast-check';
 import { synthesizeSound } from './synthesizer';
 import type { SoundConfig } from '../types/soundConfig';
 
@@ -378,5 +379,118 @@ describe('synthesizeSound', () => {
     };
     const buffer = await synthesizeSound(config);
     expect(buffer.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Property-Based Tests', () => {
+  /**
+   * Feature: synth-ui, Property 8: Synthesis Success
+   * For any valid sound configuration, clicking play should successfully synthesize audio without throwing errors.
+   * Validates: Requirements 7.1
+   */
+  test('Property 8: Synthesis Success', async () => {
+    // Helper to create valid float generator that avoids NaN
+    const validFloat = (min: number, max: number) => 
+      fc.float({ min: Math.fround(min), max: Math.fround(max), noNaN: true });
+
+    await fc.assert(
+      fc.asyncProperty(
+        fc.record({
+          synthesis: fc.record({
+            layers: fc.array(
+              fc.oneof(
+                // Oscillator layer
+                fc.record({
+                  type: fc.constant('oscillator' as const),
+                  gain: validFloat(0, 1),
+                  oscillator: fc.record({
+                    waveform: fc.constantFrom('sine', 'square', 'sawtooth', 'triangle'),
+                    frequency: validFloat(20, 20000),
+                    detune: validFloat(-100, 100),
+                  }),
+                }),
+                // Noise layer
+                fc.record({
+                  type: fc.constant('noise' as const),
+                  gain: validFloat(0, 1),
+                  noise: fc.record({
+                    type: fc.constantFrom('white', 'pink', 'brown'),
+                  }),
+                }),
+                // FM layer
+                fc.record({
+                  type: fc.constant('fm' as const),
+                  gain: validFloat(0, 1),
+                  fm: fc.record({
+                    carrier: validFloat(20, 20000),
+                    modulator: validFloat(20, 20000),
+                    modulationIndex: validFloat(0, 1000),
+                  }),
+                }),
+                // Karplus-Strong layer
+                fc.record({
+                  type: fc.constant('karplus-strong' as const),
+                  gain: validFloat(0, 1),
+                  karplus: fc.record({
+                    frequency: validFloat(20, 2000),
+                    damping: validFloat(0, 1),
+                    pluckLocation: validFloat(0, 1),
+                  }),
+                })
+              ),
+              { minLength: 1, maxLength: 4 }
+            ),
+          }),
+          envelope: fc.record({
+            attack: validFloat(0.001, 5),
+            decay: validFloat(0.001, 5),
+            sustain: validFloat(0, 1),
+            release: validFloat(0.001, 10),
+          }),
+          effects: fc.record({}),
+          timing: fc.record({
+            duration: validFloat(0.1, 2),
+          }),
+          dynamics: fc.record({
+            velocity: validFloat(0, 1),
+            normalize: fc.boolean(),
+          }),
+          metadata: fc.record({
+            name: fc.string({ minLength: 1, maxLength: 50 }),
+            category: fc.constantFrom('kick', 'snare', 'hihat', 'tom', 'perc', 'bass', 'lead', 'pad', 'fx', 'other'),
+            description: fc.string({ maxLength: 200 }),
+            tags: fc.array(fc.string({ minLength: 1, maxLength: 20 }), { maxLength: 10 }),
+          }),
+        }),
+        async (config) => {
+          // For any valid sound configuration, synthesis should succeed without throwing errors
+          let buffer: AudioBuffer | null = null;
+          let error: Error | null = null;
+
+          try {
+            buffer = await synthesizeSound(config);
+          } catch (e) {
+            error = e as Error;
+          }
+
+          // Assert that no error was thrown
+          expect(error).toBeNull();
+          
+          // Assert that a valid buffer was returned
+          expect(buffer).toBeDefined();
+          expect(buffer).not.toBeNull();
+          
+          if (buffer) {
+            // Assert buffer has valid properties
+            expect(buffer.length).toBeGreaterThan(0);
+            expect(buffer.sampleRate).toBe(44100);
+            expect(buffer.numberOfChannels).toBe(2);
+            // Duration can be very small or even 0 for short sounds, which is valid
+            expect(buffer.duration).toBeGreaterThanOrEqual(0);
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
   });
 });

@@ -13,14 +13,17 @@ export const AUDIO = {
 // OP-Z Format
 export const OPZ = {
   MAX_SLICES: 24,
-  MAX_DURATION_SECONDS: 12,
-  POSITION_SCALE: 4096,
+  MAX_DURATION_SECONDS: 11.8,
+  MAX_SLICE_DURATION_SECONDS: 4,
+  SLICE_GAP_SECONDS: 0, // No gap between slices - pack them tightly
+  // Position scale: MAX_POSITION / (SAMPLE_RATE * MAX_DURATION) ≈ 4058
+  // This matches TE's encoding (not 4096 as commonly assumed)
+  POSITION_SCALE: 4058,
   MAX_POSITION: 0x7ffffffe,
   DEFAULT_VOLUME: 8192,
   DEFAULT_PITCH: 0,
-  DEFAULT_PLAYMODE: 8192,
+  DEFAULT_PLAYMODE: 12288, // Play Out - sample plays to completion
   DEFAULT_REVERSE: 8192,
-  DEFAULT_SILENCE_THRESHOLD: -35,
 } as const;
 
 // Audio Classification
@@ -85,7 +88,7 @@ export const SYNTHESIS = {
   CHANNELS: 2,
   NOISE_BUFFER_DURATION: 2,
   DEFAULT_FREQUENCY: 440,
-  MAX_DELAY_TIME: 5,
+  MAX_DELAY_TIME: 2,
   WAVESHAPER_CURVE_SIZE: 256,
   WAVESHAPER_AMOUNT_MULTIPLIER: 100,
   REVERB_DAMPING_MULTIPLIER: 3,
