@@ -16,6 +16,11 @@ import {
   applyFilterEnvelope,
 } from './synthCore';
 
+// Safe value helper - returns fallback for non-finite values
+function safe(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
 interface ActiveVoice {
   note: number;
   sources: AudioScheduledSourceNode[];
@@ -185,7 +190,7 @@ export class RealtimeSynth {
           startTime
         );
       } else {
-        layerGain.gain.value = layer.gain;
+        layerGain.gain.value = safe(layer.gain, 1);
       }
 
       layerOutput.connect(layerGain);

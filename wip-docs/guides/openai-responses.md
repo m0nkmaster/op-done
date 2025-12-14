@@ -266,7 +266,7 @@ import OpenAI from "openai";
 const openai = new OpenAI();
 
 const response = await openai.responses.create({
-    model: "gpt-4.1",
+    model: "gpt-5.2-pro",
     input: "Tell me a three sentence bedtime story about a unicorn."
 });
 
@@ -281,7 +281,7 @@ Response
   "incomplete_details": null,
   "instructions": null,
   "max_output_tokens": null,
-  "model": "gpt-4.1-2025-04-14",
+  "model": "gpt-5.2-pro-2025-04-14",
   "output": [
     {
       "type": "message",

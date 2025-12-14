@@ -58,9 +58,9 @@ aiff.ts (existing)
 
 ## API Calls
 
-- **Planning**: 1 request to generate kit structure
-- **Configs**: Up to 24 requests (batched 4 at a time)
-- Total: ~7 batches of parallel API calls
+- **Planning**: 1 request to generate kit structure (24 sound ideas)
+- **Configs**: 1 batch request to generate all 24 sound configs
+- Total: **2 API calls** per kit generation
 
 ## Output Format
 

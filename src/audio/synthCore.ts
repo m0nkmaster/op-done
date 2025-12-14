@@ -9,6 +9,11 @@ import { PINK_NOISE } from '../config';
 // Type alias for either AudioContext or OfflineAudioContext
 type AnyAudioContext = AudioContext | OfflineAudioContext;
 
+// Safe value helper - returns fallback for non-finite values
+function safe(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
 interface LayerSources {
   sources: AudioScheduledSourceNode[];
   output: AudioNode;
@@ -58,11 +63,14 @@ function createOscillatorLayer(
   const unison = config.unison || { voices: 1, detune: 0, spread: 0 };
   const voices = Math.max(1, Math.min(8, unison.voices));
   
+  const safeFreq = safe(frequency, 440);
+  const safeDetune = safe(config.detune, 0);
+  
   if (voices === 1 && !config.sub) {
     const osc = ctx.createOscillator();
     osc.type = config.waveform;
-    osc.frequency.value = frequency;
-    osc.detune.value = config.detune || 0;
+    osc.frequency.value = safeFreq;
+    osc.detune.value = safeDetune;
     osc.start(startTime);
     sources.push(osc);
     return { sources, output: osc };
@@ -74,19 +82,19 @@ function createOscillatorLayer(
   for (let i = 0; i < voices; i++) {
     const osc = ctx.createOscillator();
     osc.type = config.waveform;
-    osc.frequency.value = frequency;
+    osc.frequency.value = safeFreq;
     
     const voiceDetune = voices > 1 
-      ? (i / (voices - 1) - 0.5) * 2 * unison.detune 
+      ? (i / (voices - 1) - 0.5) * 2 * safe(unison.detune, 0) 
       : 0;
-    osc.detune.value = (config.detune || 0) + voiceDetune;
+    osc.detune.value = safeDetune + voiceDetune;
     
     const voiceGain = ctx.createGain();
     voiceGain.gain.value = gainPerVoice;
     
     if (voices > 1 && unison.spread > 0) {
       const panner = ctx.createStereoPanner();
-      panner.pan.value = Math.max(-1, Math.min(1, (i / (voices - 1) - 0.5) * 2 * unison.spread));
+      panner.pan.value = Math.max(-1, Math.min(1, (i / (voices - 1) - 0.5) * 2 * safe(unison.spread, 0)));
       osc.connect(panner);
       panner.connect(voiceGain);
     } else {
@@ -123,19 +131,24 @@ function createFMLayer(
   startTime: number,
   sources: AudioScheduledSourceNode[]
 ): LayerSources {
-  const ratio = config.modulator / config.carrier;
+  const safeCarrier = safe(config.carrier, 1);
+  const safeModulator = safe(config.modulator, 1);
+  const safeModIndex = safe(config.modulationIndex, 1);
+  const safeFreq = safe(frequency, 440);
+  
+  const ratio = safeCarrier > 0 ? safeModulator / safeCarrier : 1;
   
   const carrier = ctx.createOscillator();
   const modulator = ctx.createOscillator();
   const modGain = ctx.createGain();
   
-  const modulatorFreq = frequency * ratio;
-  carrier.frequency.value = frequency;
-  modulator.frequency.value = modulatorFreq;
+  const modulatorFreq = safeFreq * ratio;
+  carrier.frequency.value = safeFreq;
+  modulator.frequency.value = safe(modulatorFreq, 440);
   
   // FM modulation index (β) = Δf / f_mod, so Δf = β × f_mod
   // The gain controls frequency deviation in Hz
-  modGain.gain.value = config.modulationIndex * modulatorFreq;
+  modGain.gain.value = safe(safeModIndex * modulatorFreq, 440);
   
   modulator.connect(modGain);
   modGain.connect(carrier.frequency);
@@ -201,7 +214,8 @@ function createKarplusStrongLayer(
   startTime: number,
   sources: AudioScheduledSourceNode[]
 ): LayerSources {
-  const period = 1 / frequency;
+  const safeFreq = safe(frequency, 440);
+  const period = 1 / Math.max(20, safeFreq); // Prevent divide by zero or extreme values
   const periodSamples = Math.floor(period * ctx.sampleRate);
   
   const bufferSize = ctx.sampleRate * 4; // 4 seconds max
@@ -303,7 +317,7 @@ export function createSaturation(
  */
 export function createDistortion(
   ctx: AnyAudioContext,
-  config: { type: string; amount: number; mix: number }
+  config: { type?: string; amount?: number; mix?: number }
 ): { input: GainNode; output: GainNode } {
   const input = ctx.createGain();
   const output = ctx.createGain();
@@ -311,7 +325,7 @@ export function createDistortion(
   const shaper = ctx.createWaveShaper();
   const curveSize = 256;
   const curve = new Float32Array(curveSize);
-  const amount = config.amount * 100;
+  const amount = safe(config.amount, 0.5) * 100;
   
   for (let i = 0; i < curveSize; i++) {
     const x = (i - curveSize / 2) / (curveSize / 2);
@@ -321,8 +335,9 @@ export function createDistortion(
   
   const dryGain = ctx.createGain();
   const wetGain = ctx.createGain();
-  dryGain.gain.value = 1 - config.mix;
-  wetGain.gain.value = config.mix;
+  const mix = safe(config.mix, 0.5);
+  dryGain.gain.value = 1 - mix;
+  wetGain.gain.value = mix;
   
   input.connect(dryGain);
   dryGain.connect(output);
@@ -424,14 +439,14 @@ export function createReverb(
  */
 export function createCompressor(
   ctx: AnyAudioContext,
-  config: { threshold: number; ratio: number; attack: number; release: number; knee?: number }
+  config: { threshold?: number; ratio?: number; attack?: number; release?: number; knee?: number }
 ): DynamicsCompressorNode {
   const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = Math.max(-100, Math.min(0, config.threshold));
-  comp.ratio.value = Math.max(1, Math.min(20, config.ratio));
-  comp.attack.value = Math.max(0, Math.min(1, config.attack));
-  comp.release.value = Math.max(0, Math.min(1, config.release));
-  comp.knee.value = config.knee ?? 30;
+  comp.threshold.value = Math.max(-100, Math.min(0, safe(config.threshold, -12)));
+  comp.ratio.value = Math.max(1, Math.min(20, safe(config.ratio, 4)));
+  comp.attack.value = Math.max(0, Math.min(1, safe(config.attack, 0.003)));
+  comp.release.value = Math.max(0, Math.min(1, safe(config.release, 0.25)));
+  comp.knee.value = safe(config.knee, 30);
   return comp;
 }
 
@@ -579,8 +594,10 @@ export function createLFO(
   startTime: number
 ): { output: AudioNode | null; sources: AudioScheduledSourceNode[] } {
   const sources: AudioScheduledSourceNode[] = [];
-  const delay = lfo.delay || 0;
-  const fade = lfo.fade || 0;
+  const delay = safe(lfo.delay, 0);
+  const fade = safe(lfo.fade, 0);
+  const safeFreq = safe(lfo.frequency, 1);
+  const safeDepth = safe(lfo.depth, 0.5);
 
   // Create LFO source
   let lfoSource: AudioScheduledSourceNode;
@@ -589,7 +606,7 @@ export function createLFO(
     const bufferSize = ctx.sampleRate * 10; // 10 seconds of random
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
-    const samplesPerStep = Math.floor(ctx.sampleRate / (lfo.frequency * 10));
+    const samplesPerStep = Math.max(1, Math.floor(ctx.sampleRate / (safeFreq * 10)));
     let currentValue = Math.random() * 2 - 1;
     for (let i = 0; i < bufferSize; i++) {
       if (i % samplesPerStep === 0) {
@@ -604,7 +621,7 @@ export function createLFO(
   } else {
     const osc = ctx.createOscillator();
     osc.type = lfo.waveform;
-    osc.frequency.value = Math.max(0.01, lfo.frequency);
+    osc.frequency.value = Math.max(0.01, safeFreq);
     lfoSource = osc;
   }
 
@@ -632,9 +649,9 @@ export function createLFO(
   switch (lfo.target) {
     case 'pitch': {
       // Modulate detune of all oscillators (in cents, ±1200 = ±1 octave)
-      const detuneAmount = lfo.depth * 100; // depth 1 = 100 cents = 1 semitone
+      const detuneAmount = safeDepth * 100; // depth 1 = 100 cents = 1 semitone
       const detuneGain = ctx.createGain();
-      detuneGain.gain.value = detuneAmount;
+      detuneGain.gain.value = safe(detuneAmount, 50);
       lfoGain.connect(detuneGain);
 
       // Connect to all oscillator detune parameters
@@ -649,7 +666,7 @@ export function createLFO(
     case 'filter': {
       if (filterNode) {
         const filterGain = ctx.createGain();
-        filterGain.gain.value = filterNode.frequency.value * lfo.depth;
+        filterGain.gain.value = safe(filterNode.frequency.value * safeDepth, 1000);
         lfoGain.connect(filterGain);
         filterGain.connect(filterNode.frequency);
       }
@@ -658,7 +675,7 @@ export function createLFO(
 
     case 'amplitude': {
       const ampGain = ctx.createGain();
-      ampGain.gain.value = lfo.depth;
+      ampGain.gain.value = safeDepth;
       lfoGain.connect(ampGain);
 
       const output = ctx.createGain();
@@ -670,7 +687,7 @@ export function createLFO(
 
     case 'pan': {
       const panGain = ctx.createGain();
-      panGain.gain.value = lfo.depth;
+      panGain.gain.value = safeDepth;
       lfoGain.connect(panGain);
 
       const panner = ctx.createStereoPanner();

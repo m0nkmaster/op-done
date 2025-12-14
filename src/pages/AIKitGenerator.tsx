@@ -22,7 +22,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
-import { generateSoundConfig, type AIProvider } from '../services/ai';
+import { generateBatchSoundConfigs, planDrumKit, type AIProvider, type SoundIdea } from '../services/ai';
 import { synthesizeSound } from '../audio/synthesizer';
 import { buildDrumPack } from '../audio/pack';
 import type { SoundConfig } from '../types/soundConfig';
@@ -30,12 +30,6 @@ import type { Slice } from '../types';
 import { OPZ } from '../config';
 
 type GenerationPhase = 'idle' | 'planning' | 'generating' | 'synthesizing' | 'building' | 'complete' | 'error';
-
-interface SoundIdea {
-  name: string;
-  description: string;
-  category: string;
-}
 
 interface GeneratedSound {
   idea: SoundIdea;
@@ -45,41 +39,6 @@ interface GeneratedSound {
   error?: string;
 }
 
-// System prompt for generating kit ideas
-const KIT_PLANNER_PROMPT = `You are a drum kit designer for the OP-Z synthesizer. Generate exactly 24 unique drum sound ideas for a kit.
-
-Return a JSON object with this structure:
-{
-  "kitName": "Short descriptive name for the kit",
-  "sounds": [
-    { "name": "Sound Name", "description": "Brief synthesis description", "category": "kick|snare|hihat|tom|perc|fx" }
-  ]
-}
-
-CRITICAL CONSTRAINTS:
-- Generate 24-30 sounds (we will use as many as fit in 12 seconds)
-- Duration range: 0.3-0.6 seconds per sound (allows for natural decay)
-- Focus on PUNCHY, LOUD, IMMEDIATE sounds with INSTANT attacks (attack time 0.001s or less)
-- No ambient textures, long reverbs, or evolving sounds
-- Sounds must start IMMEDIATELY - no silence at the beginning
-
-CATEGORIES TO INCLUDE (vary the quantities based on the theme):
-- kicks (punchy, short decay, 50-100Hz)
-- snares (crisp, snappy, noise bursts)
-- hihats (tight, bright, high frequency)
-- toms (quick, tonal, pitched)
-- percussion (clicks, pops, hits, claps)
-- fx (short blips, zaps, impacts)
-
-DESCRIPTIONS should specify:
-- Exact frequencies (e.g., "60Hz sine", "3kHz noise burst")
-- Short decay times (e.g., "50ms decay", "0.1s")
-- INSTANT attack (e.g., "immediate attack", "0ms attack", "instant transient")
-
-Example for "80s kicks":
-{"kitName":"80s Boom","sounds":[{"name":"808 Sub","description":"50Hz sine, 80ms decay, instant attack","category":"kick"},{"name":"Gated Thump","description":"65Hz with 100ms gated decay, immediate transient","category":"kick"},...]}
-
-REMEMBER: These are drum HITS, not sustained sounds. Every sound must start INSTANTLY with zero silence at the beginning.`;
 
 const PHASE_LABELS: Record<GenerationPhase, string> = {
   idle: '',
@@ -128,97 +87,6 @@ export default function AIKitGenerator() {
     source.start();
   }, []);
 
-  const planKit = async (userPrompt: string): Promise<{ kitName: string; sounds: SoundIdea[] }> => {
-    const apiKey = provider === 'openai' 
-      ? import.meta.env.VITE_OPENAI_KEY 
-      : import.meta.env.VITE_GEMINI_KEY;
-    
-    if (!apiKey) {
-      throw new Error(`${provider.toUpperCase()} API key not set`);
-    }
-
-    if (provider === 'gemini') {
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
-        contents: `${userPrompt}\n\nReturn ONLY the JSON, no markdown or explanation.`,
-        config: {
-          systemInstruction: KIT_PLANNER_PROMPT,
-          responseMimeType: 'application/json',
-        },
-      });
-      
-      let text: string | undefined;
-      if (typeof (response as unknown as { text: () => string }).text === 'function') {
-        text = (response as unknown as { text: () => string }).text();
-      } else if (typeof response.text === 'string') {
-        text = response.text;
-      } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
-        text = response.candidates[0].content.parts[0].text;
-      }
-      
-      if (!text) throw new Error('No response from Gemini');
-      const parsed = JSON.parse(text.trim());
-      return { kitName: parsed.kitName, sounds: parsed.sounds.slice(0, 24) };
-    } else {
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-5.2',
-          instructions: KIT_PLANNER_PROMPT,
-          input: `${userPrompt}\n\nReturn ONLY the JSON.`,
-          text: { format: { type: 'json_object' } },
-        }),
-      });
-      
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || response.statusText);
-      }
-      
-      const data = await response.json();
-      type OutputItem = { type: string; content?: { type: string; text?: string }[] };
-      const outputText = data.output?.find((item: OutputItem) => item.type === 'message')
-        ?.content?.find((c: { type: string; text?: string }) => c.type === 'output_text')?.text;
-      if (!outputText) throw new Error('No response from OpenAI');
-      const parsed = JSON.parse(outputText);
-      return { kitName: parsed.kitName, sounds: parsed.sounds.slice(0, 24) };
-    }
-  };
-
-  const generateConfig = async (idea: SoundIdea): Promise<SoundConfig> => {
-    const configPrompt = `Create a ${idea.category} drum sound: "${idea.name}" - ${idea.description}. 
-Make it LOUD, punchy, with instant attack (no silence at start). Duration should be 0.3-0.6 seconds.`;
-    
-    const config = await generateSoundConfig(configPrompt, provider);
-    config.metadata.name = idea.name;
-    config.metadata.category = idea.category as SoundConfig['metadata']['category'];
-    config.metadata.description = idea.description;
-    config.envelope.attack = Math.min(config.envelope.attack, 0.001);
-    config.timing.duration = Math.max(0.3, Math.min(config.timing.duration, 0.6));
-    
-    const envTotal = config.envelope.attack + config.envelope.decay + config.envelope.release;
-    if (envTotal > config.timing.duration) {
-      const scale = config.timing.duration / envTotal;
-      config.envelope.decay *= scale;
-      config.envelope.release *= scale;
-    }
-    
-    config.dynamics.velocity = 1.0;
-    config.dynamics.normalize = true;
-    
-    if (config.effects.delay) {
-      delete config.effects.delay;
-    }
-    
-    return config;
-  };
-
   const generate = async () => {
     if (!prompt.trim()) return;
     
@@ -230,7 +98,8 @@ Make it LOUD, punchy, with instant attack (no silence at start). Duration should
     setSounds([]);
     
     try {
-      const plan = await planKit(prompt);
+      // Phase 1: Plan the kit (1 API call)
+      const plan = await planDrumKit(prompt, provider);
       setKitName(plan.kitName);
       
       const initialSounds: GeneratedSound[] = plan.sounds.map(idea => ({
@@ -245,50 +114,33 @@ Make it LOUD, punchy, with instant attack (no silence at start). Duration should
       if (abortRef.current) return;
       setPhase('generating');
       
-      const BATCH_SIZE = 4;
-      for (let i = 0; i < initialSounds.length; i += BATCH_SIZE) {
-        if (abortRef.current) return;
-        
-        const batch = initialSounds.slice(i, i + BATCH_SIZE);
-        const batchPromises = batch.map(async (sound, batchIdx) => {
-          const globalIdx = i + batchIdx;
-          
-          setSounds(prev => prev.map((s, idx) => 
-            idx === globalIdx ? { ...s, status: 'configuring' } : s
-          ));
-          
-          try {
-            const config = await generateConfig(sound.idea);
-            setSounds(prev => prev.map((s, idx) => 
-              idx === globalIdx ? { ...s, config, status: 'synthesizing' } : s
-            ));
-            return { idx: globalIdx, config };
-          } catch (err) {
-            setSounds(prev => prev.map((s, idx) => 
-              idx === globalIdx ? { ...s, status: 'error', error: String(err) } : s
-            ));
-            return { idx: globalIdx, config: null };
-          }
-        });
-        
-        await Promise.all(batchPromises);
-        setProgress(prev => ({ ...prev, current: Math.min(i + BATCH_SIZE, initialSounds.length) }));
-      }
+      // Phase 2: Generate all configs in a single batch API call
+      setSounds(prev => prev.map(s => ({ ...s, status: 'configuring' })));
+      
+      const configs = await generateBatchSoundConfigs(plan.sounds, provider);
+      
+      // Update sounds with configs
+      setSounds(prev => prev.map((s, idx) => ({
+        ...s,
+        config: configs[idx] || null,
+        status: configs[idx] ? 'synthesizing' : 'error',
+        error: configs[idx] ? undefined : 'No config generated',
+      })));
+      setProgress({ current: plan.sounds.length, total: plan.sounds.length });
       
       if (abortRef.current) return;
       setPhase('synthesizing');
       
-      const currentSounds = await new Promise<GeneratedSound[]>(resolve => {
-        setSounds(prev => {
-          resolve(prev);
-          return prev;
-        });
-      });
+      // Phase 3: Synthesize each sound
+      const soundsWithConfigs = initialSounds.map((s, i) => ({
+        ...s,
+        config: configs[i] || null,
+      }));
       
-      for (let i = 0; i < currentSounds.length; i++) {
+      for (let i = 0; i < soundsWithConfigs.length; i++) {
         if (abortRef.current) return;
         
-        const sound = currentSounds[i];
+        const sound = soundsWithConfigs[i];
         if (!sound.config) continue;
         
         try {
@@ -308,6 +160,7 @@ Make it LOUD, punchy, with instant attack (no silence at start). Duration should
       if (abortRef.current) return;
       setPhase('building');
       
+      // Phase 4: Build the pack
       const finalSounds = await new Promise<GeneratedSound[]>(resolve => {
         setSounds(prev => {
           resolve(prev);

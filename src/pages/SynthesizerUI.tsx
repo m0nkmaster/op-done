@@ -875,7 +875,7 @@ export function SynthesizerUI() {
     setError(null);
     
     try {
-      const generatedConfig = await generateSoundConfig(prompt, provider, config);
+      const generatedConfig = await generateSoundConfig(prompt, provider);
       setConfig(generatedConfig);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'AI generation failed');
