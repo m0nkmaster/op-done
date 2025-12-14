@@ -2,11 +2,11 @@ import { transcodeAndConcat } from './ffmpeg';
 import { injectDrumMetadata, parseAiff } from './aiff';
 import { calculateSliceBoundaries } from '../utils/opz';
 import type { DrumMetadata, Slice } from '../types';
-import { SLICE_GAP_SECONDS } from '../constants';
 
 export type BuildPackOptions = {
   maxDuration: number;
   metadata: DrumMetadata;
+  format?: 'aiff' | 'aifc'; // Optional format parameter (defaults to aiff)
 };
 
 export async function buildDrumPack(
@@ -14,26 +14,29 @@ export async function buildDrumPack(
   options: BuildPackOptions
 ): Promise<Blob> {
   const files = slices.map((s) => s.file);
-  // frames returned include the padding added by ffmpeg
-  const { data, frames: chunkFrames } = await transcodeAndConcat(files, options);
-  const { numFrames } = parseAiff(data);
+  // frames are the actual frame counts of each input WAV file
+  const { data, frames: sliceFrames } = await transcodeAndConcat(files, { 
+    format: options.format 
+  });
 
-  // We need to pass the *content* duration (without padding) to the boundary calculator,
-  // because that function adds the gap duration itself.
-  const gapSamples = Math.round(SLICE_GAP_SECONDS * 44100);
-  const contentFrames = chunkFrames.map((f) => Math.max(0, f - gapSamples));
+  // Validate output file structure
+  parseAiff(data);
 
+  // Calculate slice boundaries from frame counts
+  // Uses TE format: exclusive end positions, no gaps
   const { start: startFrames, end: endFrames } = calculateSliceBoundaries(
-    contentFrames,
-    numFrames
+    sliceFrames
   );
 
   const annotated = injectDrumMetadata(
     data,
     startFrames,
     endFrames,
-    options.metadata
+    options.metadata,
+    options.format
   );
   const buffer = annotated.buffer as ArrayBuffer;
-  return new Blob([buffer], { type: 'audio/aiff' });
+  // Use the appropriate MIME type based on the format
+  const mimeType = options.format === 'aifc' ? 'audio/x-aifc' : 'audio/aiff';
+  return new Blob([buffer], { type: mimeType });
 }

@@ -11,6 +11,7 @@ OP Done is a browser-based tool for electronic music producers to create custom 
 - **[Core Concepts](./core-concepts.md)** - OP-Z format, AIFF structure, metadata encoding
 - **[Architecture](./architecture.md)** - System design, data flow, module organization
 - **[Audio Pipeline](./audio-pipeline.md)** - Processing chain, FFmpeg integration, format conversion
+- **[Drum Pack Format](./drum-pack-format.md)** - OP-Z/OP-1 drum pack AIFF specification (critical!)
 - **[Classification System](./classification.md)** - Audio analysis, pitch detection, drum classification
 - **[Synthesis Engine](./synthesis.md)** - AI-powered sound generation, Web Audio synthesis
 - **[State Management](./state-management.md)** - React hooks, slice lifecycle, UI state
@@ -215,7 +216,9 @@ bun test
 
 ## Resources
 
-- [OP-Z Format Spec](../wip-docs/guides/opz-drum-format.md)
+- [Drum Pack Format Spec](./drum-pack-format.md) - Definitive AIFF format for OP-Z/OP-1
+- [OP-Z Samples Guide](../wip-docs/guides/op-z-samples-guide.md) - Community guide
+- [TE Drum Utility](https://teenage.engineering/apps/drum-utility) - Official TE tool for testing
 - [teoperator (reference implementation)](https://github.com/schollz/teoperator)
 - [FFmpeg Filters](https://ffmpeg.org/ffmpeg-filters.html)
 - [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)

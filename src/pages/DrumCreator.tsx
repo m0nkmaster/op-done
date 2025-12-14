@@ -314,6 +314,7 @@ export function DrumCreator() {
       }
       const blob = await buildDrumPack(readySlices, {
         maxDuration,
+        format: 'aifc', // Use AIFF-C format like TE files
         metadata
       });
       const url = URL.createObjectURL(blob);

@@ -1,4 +1,4 @@
-import { OP1_SCALE, MAX_POSITION, MAX_SLICES, SLICE_GAP_SECONDS } from '../constants';
+import { OP1_SCALE, MAX_POSITION, MAX_SLICES } from '../constants';
 
 /** Encodes frame positions for OP-Z metadata (scaled × 4096) */
 export const encodePositions = (frames: number[]): number[] =>
@@ -11,57 +11,39 @@ export const encodePositions = (frames: number[]): number[] =>
 export const decodePositions = (encoded: number[]): number[] =>
   encoded.map((val) => Math.round(val / OP1_SCALE));
 
-/** Calculates slice boundaries from Frame Counts and total frames */
+/**
+ * Calculates slice boundaries from frame counts.
+ *
+ * OP-Z/OP-1 slice format uses EXCLUSIVE end positions:
+ * - Slice plays frames from start to end-1 (like Python range)
+ * - End of slice N equals start of slice N+1 (no gaps)
+ * - Total coverage: sum of all slice frame counts
+ *
+ * Example: sliceFrames = [2200, 3460]
+ * - Slice 1: start=0, end=2200 → plays frames 0..2199
+ * - Slice 2: start=2200, end=5660 → plays frames 2200..5659
+ */
 export const calculateSliceBoundaries = (
-  sliceFrames: number[],
-  totalFrames: number
+  sliceFrames: number[]
 ): { start: number[]; end: number[] } => {
-  const gapFrames = Math.round(SLICE_GAP_SECONDS * 44100);
-  // Total Frames should imply validation?
-  // We trust TotalFrames from the file.
-
   const start: number[] = [];
   const end: number[] = [];
 
   let cursor = 0;
   for (let i = 0; i < MAX_SLICES; i++) {
     const frames = sliceFrames[i] ?? 0;
+
     if (frames === 0) {
+      // Empty slice: TE uses 0,0 for unused slices
+      start.push(0);
+      end.push(0);
+    } else {
       start.push(cursor);
-      end.push(cursor);
-      continue;
+      // End is EXCLUSIVE (like Python range)
+      // No safety buffer - match TE format exactly
+      end.push(cursor + frames);
+      cursor += frames;
     }
-
-    // sliceLen is exactly frames
-    const contentLen = frames;
-    const totalBlockLen = contentLen + gapFrames;
-
-    // Clamp to file end
-    const available = totalFrames - cursor;
-    const clampedBlockLen = Math.max(0, Math.min(totalBlockLen, available));
-
-    start.push(cursor);
-    // End is inclusive, so -1. But make sure we don't go negative if len is 0.
-    // Also, End should not include gap?
-    // "End" usually marks the loop end point.
-    // If we want to play the content, end should be cursor + contentLen - 1?
-    // But if clampedBlockLen < contentLen, we are truncated.
-    const effectiveContentLen = Math.min(contentLen, clampedBlockLen);
-
-    // Subtract a small safety buffer (20 samples ~0.5ms) to ensure we stop before the gap/next slice
-    // BUT ensure we have a minimum duration for playback (e.g. 0.1s) by extending into the gap if needed.
-    const safetyBuffer = 20;
-    const minFrames = 4410; // 0.1s
-
-    // We can extend up to totalBlockLen - safetyBuffer (i.e. use the gap)
-    const maxLen = Math.max(1, clampedBlockLen - safetyBuffer);
-
-    // Target length is contentLen, but at least minFrames (clamped to maxLen)
-    const targetLen = Math.min(maxLen, Math.max(effectiveContentLen, minFrames));
-
-    end.push(cursor + targetLen - 1);
-
-    cursor += clampedBlockLen;
   }
 
   return { start, end };

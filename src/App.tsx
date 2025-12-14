@@ -73,6 +73,17 @@ function App() {
               >
                 USB Browser
               </Button>
+              <Button
+                onClick={() => navigate('/ai-kit-generator')}
+                sx={{
+                  color: location.pathname === '/ai-kit-generator' ? '#ff6b35' : 'text.secondary',
+                  borderBottom: location.pathname === '/ai-kit-generator' ? '2px solid #ff6b35' : 'none',
+                  borderRadius: 0,
+                  px: 2
+                }}
+              >
+                AI Kit Generator
+              </Button>
             </Box>
           </Toolbar>
         </AppBar>

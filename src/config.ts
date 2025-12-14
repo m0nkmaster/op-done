@@ -15,8 +15,10 @@ export const OPZ = {
   MAX_SLICES: 24,
   MAX_DURATION_SECONDS: 11.8,
   MAX_SLICE_DURATION_SECONDS: 4,
-  SLICE_GAP_SECONDS: 0.1,
-  POSITION_SCALE: 4096,
+  SLICE_GAP_SECONDS: 0, // No gap between slices - pack them tightly
+  // Position scale: MAX_POSITION / (SAMPLE_RATE * MAX_DURATION) ≈ 4058
+  // This matches TE's encoding (not 4096 as commonly assumed)
+  POSITION_SCALE: 4058,
   MAX_POSITION: 0x7ffffffe,
   DEFAULT_VOLUME: 8192,
   DEFAULT_PITCH: 0,

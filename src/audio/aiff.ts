@@ -102,22 +102,29 @@ export function parseAiff(buf: Uint8Array): AiffParseResult {
 function buildDrumMetadataChunk(
   startFrames: number[],
   endFrames: number[],
-  metadata: DrumMetadata
+  metadata: DrumMetadata,
+  format?: 'aiff' | 'aifc'
 ): Uint8Array {
   const start = padArray(startFrames, MAX_SLICES, 0);
   const end = padArray(endFrames, MAX_SLICES, 0);
   const positionsStart = encodePositions(start);
   const positionsEnd = encodePositions(end);
 
+  const drumVersion = format === 'aifc' ? 2 : metadata.drumVersion;
+  
+  // Field order must match TE official format exactly:
+  // drum_version, type, name, start, end, octave, pitch, playmode, reverse, volume, dyna_env, fx_*, lfo_*
   const payloadObj: Record<string, unknown> = {
-    drum_version: metadata.drumVersion,
+    drum_version: drumVersion,
     type: 'drum',
     name: metadata.name,
-    octave: metadata.octave,
-    pitch: padArray(metadata.pitch ?? [], MAX_SLICES, OPZ_DEFAULTS.PITCH),
     start: positionsStart,
     end: positionsEnd,
-    playmode: padArray(metadata.playmode ?? [], MAX_SLICES, OPZ_DEFAULTS.PLAYMODE),
+    octave: metadata.octave,
+    pitch: padArray(metadata.pitch ?? [], MAX_SLICES, OPZ_DEFAULTS.PITCH),
+    playmode: format === 'aifc' 
+      ? Array(MAX_SLICES).fill(4096)
+      : padArray(metadata.playmode ?? [], MAX_SLICES, OPZ_DEFAULTS.PLAYMODE),
     reverse: padArray(metadata.reverse ?? [], MAX_SLICES, OPZ_DEFAULTS.REVERSE),
     volume: padArray(metadata.volume ?? [], MAX_SLICES, OPZ_DEFAULTS.VOLUME),
     dyna_env: [0, 8192, 0, 8192, 0, 0, 0, 0],
@@ -129,7 +136,7 @@ function buildDrumMetadataChunk(
     lfo_params: [16000, 16000, 16000, 16000, 0, 0, 0, 0]
   };
 
-  if (metadata.drumVersion >= 3) {
+  if (format !== 'aifc' && metadata.drumVersion >= 3) {
     payloadObj.dyna_env = [0, 8192, 0, 0, 0, 0, 0, 0];
     payloadObj.editable = true;
     payloadObj.lfo_params = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -137,9 +144,12 @@ function buildDrumMetadataChunk(
 
   const jsonStr = JSON.stringify(payloadObj);
   const jsonBytes = new TextEncoder().encode(jsonStr);
-  const payload = new Uint8Array(4 + jsonBytes.length);
+  // TE format includes a null terminator after the JSON as part of the payload
+  const payload = new Uint8Array(4 + jsonBytes.length + 1);
   payload.set([0x6f, 0x70, 0x2d, 0x31], 0); // 'op-1'
   payload.set(jsonBytes, 4);
+  payload[4 + jsonBytes.length] = 0; // null terminator
+  
   const pad = payload.length % 2 === 1 ? 1 : 0;
   const chunkSize = payload.length;
 
@@ -156,7 +166,8 @@ export function injectDrumMetadata(
   aiff: Uint8Array,
   startFrames: number[],
   endFrames: number[],
-  metadata: DrumMetadata
+  metadata: DrumMetadata,
+  format?: 'aiff' | 'aifc'
 ): Uint8Array {
   const { chunks, formSize } = parseAiff(aiff);
   const ssndChunk = chunks.find((c) => c.id === 'SSND');
@@ -165,7 +176,8 @@ export function injectDrumMetadata(
   const metadataChunk = buildDrumMetadataChunk(
     startFrames,
     endFrames,
-    metadata
+    metadata,
+    format
   );
 
   const result = new Uint8Array(aiff.length + metadataChunk.length);
