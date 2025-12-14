@@ -17,6 +17,7 @@ OP Done is a browser-based tool for electronic music producers to create custom 
 - **[State Management](./state-management.md)** - React hooks, slice lifecycle, UI state
 - **[Testing Guide](./testing.md)** - Unit tests, integration tests, test patterns
 - **[Contributing](./contributing.md)** - Code style, PR process, development workflow
+- **[Roadmap](./roadmap.md)** - Planned features and future development
 
 ## Quick Start
 

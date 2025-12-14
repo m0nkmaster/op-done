@@ -22,7 +22,7 @@ export const OPZ = {
   MAX_POSITION: 0x7ffffffe,
   DEFAULT_VOLUME: 8192,
   DEFAULT_PITCH: 0,
-  DEFAULT_PLAYMODE: 8192,
+  DEFAULT_PLAYMODE: 12288, // Play Out - sample plays to completion
   DEFAULT_REVERSE: 8192,
 } as const;
 

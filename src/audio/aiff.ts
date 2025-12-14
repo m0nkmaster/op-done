@@ -117,13 +117,13 @@ function buildDrumMetadataChunk(
   const payloadObj: Record<string, unknown> = {
     drum_version: drumVersion,
     type: 'drum',
-    name: metadata.name,
+    name: metadata.name || 'op-done', // TE utility requires non-empty name
     start: positionsStart,
     end: positionsEnd,
     octave: metadata.octave,
     pitch: padArray(metadata.pitch ?? [], MAX_SLICES, OPZ_DEFAULTS.PITCH),
     playmode: format === 'aifc' 
-      ? Array(MAX_SLICES).fill(4096)
+      ? Array(MAX_SLICES).fill(OPZ_DEFAULTS.PLAYMODE)
       : padArray(metadata.playmode ?? [], MAX_SLICES, OPZ_DEFAULTS.PLAYMODE),
     reverse: padArray(metadata.reverse ?? [], MAX_SLICES, OPZ_DEFAULTS.REVERSE),
     volume: padArray(metadata.volume ?? [], MAX_SLICES, OPZ_DEFAULTS.VOLUME),
@@ -144,20 +144,22 @@ function buildDrumMetadataChunk(
 
   const jsonStr = JSON.stringify(payloadObj);
   const jsonBytes = new TextEncoder().encode(jsonStr);
-  // TE format includes a null terminator after the JSON as part of the payload
-  const payload = new Uint8Array(4 + jsonBytes.length + 1);
+  
+  // TE format: 'op-1' + JSON + null terminator + padding to even size
+  // The chunk size must be even for TE utility compatibility
+  const baseSize = 4 + jsonBytes.length + 1; // op-1 + json + null
+  const paddedSize = baseSize % 2 === 0 ? baseSize : baseSize + 1;
+  
+  const payload = new Uint8Array(paddedSize);
   payload.set([0x6f, 0x70, 0x2d, 0x31], 0); // 'op-1'
   payload.set(jsonBytes, 4);
   payload[4 + jsonBytes.length] = 0; // null terminator
-  
-  const pad = payload.length % 2 === 1 ? 1 : 0;
-  const chunkSize = payload.length;
+  // Remaining bytes are already 0 (padding)
 
-  const chunk = new Uint8Array(8 + chunkSize + pad);
+  const chunk = new Uint8Array(8 + paddedSize);
   chunk.set([0x41, 0x50, 0x50, 0x4c], 0); // 'APPL'
-  writeUInt32BE(chunk, 4, chunkSize);
+  writeUInt32BE(chunk, 4, paddedSize);
   chunk.set(payload, 8);
-  if (pad) chunk[8 + chunkSize] = 0;
 
   return chunk;
 }

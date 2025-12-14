@@ -88,6 +88,7 @@ export default function AIKitGenerator() {
   const [progress, setProgress] = useState({ current: 0, total: 24 });
   const [error, setError] = useState<string | null>(null);
   const [finalBlob, setFinalBlob] = useState<Blob | null>(null);
+  const [packInfo, setPackInfo] = useState<{ sliceCount: number; totalDuration: number } | null>(null);
   
   const audioCtxRef = useRef<AudioContext | null>(null);
   const abortRef = useRef(false);
@@ -124,7 +125,7 @@ export default function AIKitGenerator() {
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-pro-preview',
         contents: `${userPrompt}\n\nReturn ONLY the JSON, no markdown or explanation.`,
         config: {
           systemInstruction: KIT_PLANNER_PROMPT,
@@ -152,7 +153,7 @@ export default function AIKitGenerator() {
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4.1-mini',
+          model: 'gpt-5.2',
           instructions: KIT_PLANNER_PROMPT,
           input: `${userPrompt}\n\nReturn ONLY the JSON.`,
           text: { format: { type: 'json_object' } },
@@ -216,6 +217,7 @@ Make it LOUD, punchy, with instant attack (no silence at start). Duration should
     abortRef.current = false;
     setError(null);
     setFinalBlob(null);
+    setPackInfo(null);
     setPhase('planning');
     setSounds([]);
     
@@ -315,8 +317,9 @@ Make it LOUD, punchy, with instant attack (no silence at start). Duration should
         throw new Error('No sounds were generated successfully');
       }
       
-      const blob = await buildPack(validBuffers, kitName);
-      setFinalBlob(blob);
+      const result = await buildPack(validBuffers, kitName || 'AI Kit');
+      setFinalBlob(result.blob);
+      setPackInfo({ sliceCount: result.sliceCount, totalDuration: result.totalDuration });
       setPhase('complete');
       
     } catch (err) {
@@ -431,7 +434,7 @@ Make it LOUD, punchy, with instant attack (no silence at start). Duration should
 
   // Build the OP-Z pack from audio buffers using the proven buildDrumPack function
   // Fits as many sounds as possible within 12 seconds (max 24 slices)
-  const buildPack = async (buffers: AudioBuffer[], name: string): Promise<Blob> => {
+  const buildPack = async (buffers: AudioBuffer[], name: string): Promise<{ blob: Blob; sliceCount: number; totalDuration: number }> => {
     // Convert AudioBuffers to WAV files, fitting as many as possible in 12 seconds
     const slices: Slice[] = [];
     let totalDuration = 0;
@@ -465,21 +468,21 @@ Make it LOUD, punchy, with instant attack (no silence at start). Duration should
     
     console.log(`[buildPack] Using ${slices.length} slices, ${totalDuration.toFixed(2)}s total`);
     
-    // Use the proven buildDrumPack function
-    // Match teenage-engineering-official.aif format exactly
-    return buildDrumPack(slices, {
+    const blob = await buildDrumPack(slices, {
       maxDuration: OPZ.MAX_DURATION_SECONDS,
-      format: 'aifc', // Use AIFF-C format like TE files
+      format: 'aifc',
       metadata: {
         name: name.slice(0, 32),
         octave: 0,
-        drumVersion: 2, // Version 2 (matches TE official files)
+        drumVersion: 2,
         pitch: new Array(OPZ.MAX_SLICES).fill(0),
-        playmode: new Array(OPZ.MAX_SLICES).fill(4096), // Use 4096 to match TE official files
+        playmode: new Array(OPZ.MAX_SLICES).fill(12288), // Play Out - sample plays to completion
         reverse: new Array(OPZ.MAX_SLICES).fill(8192),
         volume: new Array(OPZ.MAX_SLICES).fill(8192),
       },
     });
+    
+    return { blob, sliceCount: slices.length, totalDuration };
   };
 
   // Download the pack
@@ -702,11 +705,27 @@ Make it LOUD, punchy, with instant attack (no silence at start). Duration should
           }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>✓</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: TE.green, marginBottom: 8 }}>
-              {kitName}
+              {kitName || 'AI Kit'}
             </div>
-            <div style={{ fontSize: 13, color: TE.textDim, marginBottom: 16 }}>
-              {sounds.filter(s => s.status === 'ready').length} sounds • Ready for OP-Z
-            </div>
+            {packInfo ? (
+              <>
+                <div style={{ fontSize: 14, color: TE.text, marginBottom: 8 }}>
+                  {packInfo.sliceCount} of {sounds.filter(s => s.status === 'ready').length} sounds included
+                </div>
+                <div style={{ fontSize: 13, color: TE.textDim, marginBottom: 16 }}>
+                  {packInfo.totalDuration.toFixed(1)}s total • Ready for OP-Z
+                </div>
+                {packInfo.sliceCount < sounds.filter(s => s.status === 'ready').length && (
+                  <div style={{ fontSize: 12, color: TE.yellow, marginBottom: 16 }}>
+                    Some sounds didn't fit (12s limit)
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: TE.textDim, marginBottom: 16 }}>
+                Ready for OP-Z
+              </div>
+            )}
             <button
               onClick={download}
               style={{
