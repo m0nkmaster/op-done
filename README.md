@@ -1,29 +1,51 @@
 # OP Done
 
-Browser-based drum sample pack builder for the Teenage Engineering OP-Z. Converts audio files into OP-Z-compatible AIFF drum packs with proper slice metadata.
+Browser-based toolkit for Teenage Engineering OP-Z. Create drum packs, synthesize sounds, and manage samples—all client-side.
 
 ## Features
 
-### Drum Kit Creator
+### 🥁 Drum Kit Creator
+Build OP-Z drum packs from your own samples.
 - Import up to 24 audio files (WAV, AIFF, MP3, M4A, FLAC)
-- Automatic conversion to mono, 16-bit, 44.1kHz AIFF
-- Audio classification (kick, snare, hat, cymbal, melodic)
+- Auto-converts to OP-Z format (mono, 16-bit, 44.1kHz AIFF)
+- Automatic sample classification (kick, snare, hat, cymbal)
 - Pitch detection for melodic samples
-- Per-slice volume, pitch, and playback controls
-- Real-time duration validation (12s max)
-- Waveform preview for each slice
+- Per-slice volume, pitch, and preview controls
+- Real-time duration validation (11.8s max)
+- Waveform visualization
 
-### Sample Analyzer
-- Load and inspect existing OP-Z drum packs
+### 🔬 Sample Analyzer
+Inspect existing OP-Z drum packs.
+- Parse and display metadata
 - Visualize waveform with slice boundaries
-- View metadata and slice parameters
-- Click to audition individual slices
+- Audition individual slices
+- View all parameters (volume, pitch, playmode, reverse)
 
-### AI Sound Creation
-- Generate sounds from text descriptions
-- Supports OpenAI and Google Gemini
-- Web Audio synthesis engine
+### 🎹 Synthesizer
+Full-featured Web Audio synth with AI integration.
+- Layered synthesis: oscillators, noise, FM, Karplus-Strong
+- Per-layer filters and saturation
+- ADSR envelopes with curve control
+- LFO modulation (pitch, filter, amplitude, pan)
+- Effects: reverb, delay, distortion, compressor, gate
+- JSON editor for direct config editing
+- MIDI input support for live playing
+- AI sound generation (OpenAI/Gemini)
 - Export to WAV
+
+### 🤖 AI Kit Generator
+Generate complete drum kits from text prompts.
+- Describe your kit style (e.g., "vintage 808", "industrial", "lo-fi")
+- AI plans 24 unique sounds
+- Synthesizes and exports as ready-to-use OP-Z pack
+- Supports OpenAI and Google Gemini
+
+### 💾 USB Browser
+Direct OP-Z file management (Chromium browsers only).
+- Browse sample pack slots
+- Upload packs directly to device
+- Delete and replace existing packs
+- Uses File System Access API
 
 ## Quick Start
 
@@ -34,49 +56,29 @@ bun dev
 
 Open http://localhost:5173
 
-## Usage
+## OP-Z Installation
 
-### Create a Drum Pack
+1. Export your pack from Drum Kit Creator or AI Kit Generator
+2. Connect OP-Z in content mode
+3. Copy `.aif` file to `sample packs/<track>/<slot>/`
+   - Tracks: `1-kick`, `2-snare`, `3-perc`, `4-sample`
+   - Slots: `01` through `10`
+4. Eject and reboot OP-Z
 
-1. Go to **Drum Kit Creator**
-2. Drag audio files onto the drop zone (up to 24)
-3. Adjust per-slice volume and pitch as needed
-4. Set pack name and metadata
-5. Click **Export** to download the `.aif` file
+## AI Setup
 
-### Install on OP-Z
+For AI features (Synthesizer and AI Kit Generator), add API keys to `.env`:
 
-1. Connect OP-Z in content mode
-2. Copy the `.aif` to `sample packs/<track>/<slot>/`
-3. Eject and reboot the OP-Z
-4. Check `import.log` if issues occur
-
-### AI Sound Creation
-
-1. Select provider (OpenAI or Gemini)
-2. Enter your API key
-3. Describe the sound you want
-4. Generate, preview, and export
-
-Requires API key in `.env`:
-- OpenAI: `VITE_OPENAI_KEY`
-- Gemini: `VITE_GEMINI_KEY`
-
-## OP-Z Format
-
-| Constraint | Value |
-|------------|-------|
-| Container | AIFF-C (mono, 16-bit, 44.1kHz) |
-| Max duration | 12 seconds |
-| Max slices | 24 |
-| Metadata | APPL chunk with `op-1` JSON |
-| Position encoding | Frame × 4096 |
+```
+VITE_OPENAI_KEY=sk-...
+VITE_GEMINI_KEY=...
+```
 
 ## Commands
 
 ```bash
 bun install       # Install dependencies
-bun dev           # Start dev server
+bun dev           # Dev server (localhost:5173)
 bun run build     # Production build
 bun test          # Run tests
 bun run lint      # Check linting
@@ -85,35 +87,23 @@ bun run lint:fix  # Auto-fix lint issues
 
 ## Tech Stack
 
-- **Runtime**: Bun
-- **UI**: Vite + React + TypeScript + MUI
-- **Audio**: ffmpeg.wasm (client-side processing)
-- **Testing**: Vitest
+| Component | Technology |
+|-----------|------------|
+| Runtime | Bun |
+| UI | Vite + React + TypeScript + MUI |
+| Audio | ffmpeg.wasm + Web Audio API |
+| Testing | Vitest |
+| Linting | ESLint 9 |
 
 ## Documentation
 
-- **[User Guide](user-guide/user-guide.md)** — Complete usage instructions
-- **[Developer Docs](developer-docs/README.md)** — Technical documentation
-  - [Architecture](developer-docs/architecture.md)
-  - [Format Spec](developer-docs/format-spec.md)
-  - [Audio Processing](developer-docs/audio-processing.md)
-  - [Contributing](developer-docs/contributing.md)
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| Export disabled | Check duration ≤ 12s, all slices ready |
-| Silent playback | Click page first to unlock audio |
-| Slices ignored on OP-Z | Keep per-slice < 4s, re-export |
-| AI fails | Verify API key, check network |
-
-See [User Guide](user-guide/user-guide.md#troubleshooting) for more help.
+- **[User Guide](user-guide/user-guide.md)** — How to use each feature
+- **[Developer Docs](developer-docs/README.md)** — Architecture and internals
 
 ## Privacy
 
 - All audio processing runs locally in your browser
-- No files are uploaded (except AI prompts to your chosen provider)
+- No files uploaded except AI text prompts (when using AI features)
 - Works offline (except AI features)
 
 ## License
@@ -122,5 +112,5 @@ MIT
 
 ## Credits
 
-- Format specification based on [teoperator](https://github.com/schollz/teoperator)
+- Format research from [teoperator](https://github.com/schollz/teoperator)
 - Built for the OP-Z community
