@@ -15,7 +15,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />}>
-          <Route index element={<Navigate to="/drum-creator" replace />} />
+          <Route index element={<Navigate to="/synthesizer" replace />} />
           <Route path="drum-creator" element={<DrumCreator />} />
           <Route path="sample-analyzer" element={<SampleAnalyzer />} />
           <Route path="synthesizer" element={<ErrorBoundary><SynthesizerUI /></ErrorBoundary>} />

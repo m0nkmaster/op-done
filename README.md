@@ -1,17 +1,34 @@
 # OP Done
 
-Browser-based toolkit for Teenage Engineering OP-Z. Create drum packs, synthesize sounds, and manage samples—all client-side.
+Browser-based synthesizer and sample pack toolkit. Create sounds with AI, build drum kits, and export to OP-Z—all client-side.
 
 ## Features
+
+### 🎹 Synthesizer
+Full-featured Web Audio synth with AI-powered sound design.
+- **Layered synthesis**: Oscillators, noise, FM, Karplus-Strong
+- **Per-layer processing**: Filters, saturation, envelopes
+- **Modulation**: LFO targeting pitch, filter, amplitude, pan
+- **Effects chain**: Reverb, delay, distortion, compressor, gate
+- **AI generation**: Describe any sound, get a playable patch (OpenAI/Gemini)
+- **MIDI input**: Play live with any connected controller
+- **JSON editor**: Full control over synthesis parameters
+- **Export**: Download as WAV
+
+### 🤖 AI Kit Generator
+Generate complete 24-sound drum kits from text prompts.
+- Describe your kit style ("vintage 808", "industrial", "lo-fi jazz")
+- AI plans and synthesizes all 24 sounds
+- Exports as ready-to-use OP-Z drum pack
+- Supports OpenAI and Google Gemini
 
 ### 🥁 Drum Kit Creator
 Build OP-Z drum packs from your own samples.
 - Import up to 24 audio files (WAV, AIFF, MP3, M4A, FLAC)
-- Auto-converts to OP-Z format (mono, 16-bit, 44.1kHz AIFF)
-- Automatic sample classification (kick, snare, hat, cymbal)
+- Auto-converts to OP-Z format (mono, 16-bit, 44.1kHz)
+- Automatic classification (kick, snare, hat, cymbal)
 - Pitch detection for melodic samples
 - Per-slice volume, pitch, and preview controls
-- Real-time duration validation (11.8s max)
 - Waveform visualization
 
 ### 🔬 Sample Analyzer
@@ -21,31 +38,11 @@ Inspect existing OP-Z drum packs.
 - Audition individual slices
 - View all parameters (volume, pitch, playmode, reverse)
 
-### 🎹 Synthesizer
-Full-featured Web Audio synth with AI integration.
-- Layered synthesis: oscillators, noise, FM, Karplus-Strong
-- Per-layer filters and saturation
-- ADSR envelopes with curve control
-- LFO modulation (pitch, filter, amplitude, pan)
-- Effects: reverb, delay, distortion, compressor, gate
-- JSON editor for direct config editing
-- MIDI input support for live playing
-- AI sound generation (OpenAI/Gemini)
-- Export to WAV
-
-### 🤖 AI Kit Generator
-Generate complete drum kits from text prompts.
-- Describe your kit style (e.g., "vintage 808", "industrial", "lo-fi")
-- AI plans 24 unique sounds
-- Synthesizes and exports as ready-to-use OP-Z pack
-- Supports OpenAI and Google Gemini
-
 ### 💾 USB Browser
 Direct OP-Z file management (Chromium browsers only).
 - Browse sample pack slots
 - Upload packs directly to device
 - Delete and replace existing packs
-- Uses File System Access API
 
 ## Quick Start
 
@@ -56,23 +53,26 @@ bun dev
 
 Open http://localhost:5173
 
-## OP-Z Installation
-
-1. Export your pack from Drum Kit Creator or AI Kit Generator
-2. Connect OP-Z in content mode
-3. Copy `.aif` file to `sample packs/<track>/<slot>/`
-   - Tracks: `1-kick`, `2-snare`, `3-perc`, `4-sample`
-   - Slots: `01` through `10`
-4. Eject and reboot OP-Z
-
 ## AI Setup
 
-For AI features (Synthesizer and AI Kit Generator), add API keys to `.env`:
+For AI-powered features, add API keys to `.env`:
 
 ```
 VITE_OPENAI_KEY=sk-...
 VITE_GEMINI_KEY=...
 ```
+
+Then use the Synthesizer or AI Kit Generator to create sounds from text descriptions.
+
+## OP-Z Installation
+
+After exporting a drum pack:
+
+1. Connect OP-Z in content mode
+2. Copy `.aif` file to `sample packs/<track>/<slot>/`
+   - Tracks: `1-kick`, `2-snare`, `3-perc`, `4-sample`
+   - Slots: `01` through `10`
+3. Eject and reboot OP-Z
 
 ## Commands
 
@@ -91,9 +91,9 @@ bun run lint:fix  # Auto-fix lint issues
 |-----------|------------|
 | Runtime | Bun |
 | UI | Vite + React + TypeScript + MUI |
-| Audio | ffmpeg.wasm + Web Audio API |
+| Audio | Web Audio API + ffmpeg.wasm |
+| AI | OpenAI GPT / Google Gemini |
 | Testing | Vitest |
-| Linting | ESLint 9 |
 
 ## Documentation
 
@@ -108,8 +108,8 @@ bun run lint:fix  # Auto-fix lint issues
 
 ## Related Tools
 
-- **[TE Drum Utility](https://teenage.engineering/apps/drum-utility)** — Official Teenage Engineering web tool for creating drum packs. Great for testing compatibility.
-- **[teoperator](https://github.com/schollz/teoperator)** — Command-line tool by [@schollz](https://github.com/schollz) for creating OP-1/OP-Z patches. Invaluable format research resource.
+- **[TE Drum Utility](https://teenage.engineering/apps/drum-utility)** — Official Teenage Engineering drum pack tool
+- **[teoperator](https://github.com/schollz/teoperator)** — CLI tool by [@schollz](https://github.com/schollz) for OP-1/OP-Z patches
 
 ## License
 
@@ -117,8 +117,6 @@ MIT
 
 ## Credits
 
-This project builds on the work of the OP-Z community:
-
-- **Format specification** derived from reverse engineering by [schollz/teoperator](https://github.com/schollz/teoperator)
-- **Compatibility testing** validated against [TE Drum Utility](https://teenage.engineering/apps/drum-utility)
+- **Format specification** from [schollz/teoperator](https://github.com/schollz/teoperator)
+- **Compatibility testing** against [TE Drum Utility](https://teenage.engineering/apps/drum-utility)
 - Built with ❤️ for the Teenage Engineering community

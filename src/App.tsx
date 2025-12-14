@@ -153,14 +153,14 @@ function AppContent() {
           <Toolbar sx={{ minHeight: 64, px: 3 }}>
             <TELogo size={32} />
             <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', gap: 1 }}>
+              <Button onClick={() => navigate('/synthesizer')} sx={navButtonStyle('/synthesizer')}>
+                Synth
+              </Button>
               <Button onClick={() => navigate('/drum-creator')} sx={navButtonStyle('/drum-creator')}>
                 Drum Kit
               </Button>
               <Button onClick={() => navigate('/sample-analyzer')} sx={navButtonStyle('/sample-analyzer')}>
                 Analyzer
-              </Button>
-              <Button onClick={() => navigate('/synthesizer')} sx={navButtonStyle('/synthesizer')}>
-                Synth
               </Button>
               <Button onClick={() => navigate('/usb-browser')} sx={navButtonStyle('/usb-browser')}>
                 USB

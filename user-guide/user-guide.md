@@ -4,6 +4,113 @@ Complete guide to all OP Done features.
 
 ---
 
+## Synthesizer
+
+Full-featured Web Audio synthesizer with MIDI support and AI-powered sound design.
+
+### Interface Sections
+
+**Top Bar**
+- Sound name display
+- Generate button (AI)
+- Play/Stop buttons
+- Export WAV
+
+**Scope**
+- Real-time waveform visualization
+
+**Layers**
+- Add up to 4 synthesis layers
+- Each layer can be: Oscillator, Noise, FM, or Karplus-Strong
+- Per-layer filter, saturation, and envelope
+
+**Global Controls**
+- Master envelope (ADSR)
+- Global filter with envelope
+- LFO (modulates pitch, filter, amplitude, or pan)
+
+**Effects**
+- Distortion, Compressor, Gate, Delay, Reverb
+
+**JSON Editor**
+- Direct SoundConfig editing
+- Validation with error display
+- Copy/paste configurations
+
+### Layer Types
+
+| Type | Description |
+|------|-------------|
+| Oscillator | Waveforms: sine, square, saw, triangle. Optional unison and sub-oscillator |
+| Noise | White, pink, or brown noise |
+| FM | Frequency modulation synthesis |
+| Karplus-Strong | Physical modeling (plucked strings) |
+
+### MIDI Support
+
+1. Connect a MIDI controller
+2. The synth automatically detects available devices
+3. Play notes to trigger sounds in real-time
+4. The keyboard display shows active notes
+
+### AI Generation
+
+1. Enter a text description (e.g., "punchy 808 kick", "ethereal pad", "metallic pluck")
+2. Select provider (OpenAI or Gemini)
+3. Click **Generate**
+4. AI returns a complete SoundConfig
+5. Preview and refine with follow-up prompts
+
+Requires API key in settings.
+
+### Export
+
+Click **Export WAV** to download the rendered sound. Use this to create samples for the Drum Kit Creator.
+
+---
+
+## AI Kit Generator
+
+Generate complete 24-sound drum kits from text descriptions.
+
+### Workflow
+
+1. Enter a kit description (e.g., "80s synthwave", "dark techno", "acoustic jazz")
+2. Select AI provider and enter API key
+3. Click **Generate Kit**
+4. AI plans 24 sounds optimized for OP-Z constraints
+5. Each sound is synthesized in sequence
+6. Download the complete pack when finished
+
+### Generation Phases
+
+| Phase | What Happens |
+|-------|--------------|
+| Planning | AI creates 24 sound descriptions |
+| Generating | AI generates SoundConfig for each |
+| Synthesizing | Web Audio renders each sound |
+| Building | Pack is assembled with metadata |
+| Complete | Download is ready |
+
+### Sound Categories
+
+The AI distributes sounds across categories:
+- **Kicks** — Low-frequency punchy hits
+- **Snares** — Mid-range transients with noise
+- **Hi-hats** — High-frequency, short decay
+- **Toms** — Pitched, quick decay
+- **Percussion** — Clicks, pops, claps
+- **FX** — Blips, zaps, impacts
+
+### Tips
+
+- Be specific: "deep 808 sub kick" works better than "kick"
+- Mention genres: "90s jungle breaks", "minimal techno"
+- The AI targets 0.3–0.6s per sound to fit 24 sounds in 11.8 seconds
+- Generation takes 1–3 minutes depending on AI provider
+
+---
+
 ## Drum Kit Creator
 
 Build OP-Z drum packs from your own audio samples.
@@ -97,113 +204,6 @@ The file must be an AIFF with OP-Z metadata (APPL chunk with `op-1` signature).
 
 ---
 
-## Synthesizer
-
-Full-featured Web Audio synthesizer with MIDI support and AI generation.
-
-### Interface Sections
-
-**Top Bar**
-- Sound name display
-- Generate button (AI)
-- Play/Stop buttons
-- Export WAV
-
-**Scope**
-- Real-time waveform visualization
-
-**Layers**
-- Add up to 4 synthesis layers
-- Each layer can be: Oscillator, Noise, FM, or Karplus-Strong
-- Per-layer filter, saturation, and envelope
-
-**Global Controls**
-- Master envelope (ADSR)
-- Global filter with envelope
-- LFO (modulates pitch, filter, amplitude, or pan)
-
-**Effects**
-- Distortion, Compressor, Gate, Delay, Reverb
-
-**JSON Editor**
-- Direct SoundConfig editing
-- Validation with error display
-- Copy/paste configurations
-
-### Layer Types
-
-| Type | Description |
-|------|-------------|
-| Oscillator | Waveforms: sine, square, saw, triangle. Optional unison and sub-oscillator |
-| Noise | White, pink, or brown noise |
-| FM | Frequency modulation synthesis |
-| Karplus-Strong | Physical modeling (plucked strings) |
-
-### MIDI Support
-
-1. Connect a MIDI controller
-2. The synth automatically detects available devices
-3. Play notes to trigger sounds in real-time
-4. The keyboard display shows active notes
-
-### AI Generation
-
-1. Enter a text description (e.g., "punchy 808 kick", "ethereal pad")
-2. Select provider (OpenAI or Gemini)
-3. Click **Generate**
-4. AI returns a complete SoundConfig
-5. Preview and refine with follow-up prompts
-
-Requires API key in settings.
-
-### Export
-
-Click **Export WAV** to download the rendered sound. Use this to create samples for the Drum Kit Creator.
-
----
-
-## AI Kit Generator
-
-Generate complete 24-sound drum kits from text descriptions.
-
-### Workflow
-
-1. Enter a kit description (e.g., "80s synthwave", "dark techno", "acoustic jazz")
-2. Select AI provider and enter API key
-3. Click **Generate Kit**
-4. AI plans 24 sounds optimized for OP-Z constraints
-5. Each sound is synthesized in sequence
-6. Download the complete pack when finished
-
-### Generation Phases
-
-| Phase | What Happens |
-|-------|--------------|
-| Planning | AI creates 24 sound descriptions |
-| Generating | AI generates SoundConfig for each |
-| Synthesizing | Web Audio renders each sound |
-| Building | Pack is assembled with metadata |
-| Complete | Download is ready |
-
-### Sound Categories
-
-The AI distributes sounds across categories:
-- **Kicks** — Low-frequency punchy hits
-- **Snares** — Mid-range transients with noise
-- **Hi-hats** — High-frequency, short decay
-- **Toms** — Pitched, quick decay
-- **Percussion** — Clicks, pops, claps
-- **FX** — Blips, zaps, impacts
-
-### Tips
-
-- Be specific: "deep 808 sub kick" works better than "kick"
-- Mention genres: "90s jungle breaks", "minimal techno"
-- The AI targets 0.3–0.6s per sound to fit 24 sounds in 11.8 seconds
-- Generation takes 1–3 minutes depending on AI provider
-
----
-
 ## USB Browser
 
 Direct file management on a connected OP-Z.
@@ -244,59 +244,6 @@ Each track has 10 slots (01–10).
 
 ---
 
-## Troubleshooting
-
-### Drum Kit Creator
-
-| Problem | Solution |
-|---------|----------|
-| Export button disabled | Check: duration ≤ 11.8s, all slices ready, not processing |
-| Slice shows error | Try a different audio format (WAV usually works best) |
-| Classification wrong | Classification is just a suggestion—it doesn't affect the audio |
-
-### Sample Analyzer
-
-| Problem | Solution |
-|---------|----------|
-| "No APPL chunk" | File doesn't have OP-Z metadata—export from Drum Kit Creator first |
-| Silent playback | Click anywhere on the page to unlock audio |
-| Wrong boundaries | Visual positions use original frame count; metadata is accurate |
-
-### Synthesizer
-
-| Problem | Solution |
-|---------|----------|
-| No sound | Check volume isn't zero, attack isn't too long, frequency is audible |
-| MIDI not working | Check browser permissions, try refreshing |
-| AI fails | Verify API key, check network connection |
-| Clicks/pops | Increase attack/release times slightly |
-
-### AI Kit Generator
-
-| Problem | Solution |
-|---------|----------|
-| Generation stuck | Refresh and try again—AI providers can timeout |
-| Sounds too similar | Use more specific prompts with variety keywords |
-| Pack too long | AI targets short sounds, but some may be trimmed |
-
-### USB Browser
-
-| Problem | Solution |
-|---------|----------|
-| "Not supported" | Use Chrome, Edge, or another Chromium browser |
-| Can't see folders | Make sure you selected the OP-Z root folder |
-| Upload fails | Check OP-Z isn't write-protected or full |
-
-### General
-
-| Problem | Solution |
-|---------|----------|
-| Nothing loads | Refresh the page, check browser console for errors |
-| Slow performance | ffmpeg.wasm is large (~30MB)—first load takes time |
-| Audio cuts off | Total duration must be under 11.8 seconds |
-
----
-
 ## OP-Z Installation Guide
 
 ### Step by Step
@@ -318,6 +265,59 @@ Each track has 10 slots (01–10).
 - Samples should be available on the corresponding track
 - If not working, check `import.log` on the OP-Z for errors
 - Common issues: file too long, wrong format, corrupted metadata
+
+---
+
+## Troubleshooting
+
+### Synthesizer
+
+| Problem | Solution |
+|---------|----------|
+| No sound | Check volume isn't zero, attack isn't too long, frequency is audible |
+| MIDI not working | Check browser permissions, try refreshing |
+| AI fails | Verify API key, check network connection |
+| Clicks/pops | Increase attack/release times slightly |
+
+### AI Kit Generator
+
+| Problem | Solution |
+|---------|----------|
+| Generation stuck | Refresh and try again—AI providers can timeout |
+| Sounds too similar | Use more specific prompts with variety keywords |
+| Pack too long | AI targets short sounds, but some may be trimmed |
+
+### Drum Kit Creator
+
+| Problem | Solution |
+|---------|----------|
+| Export button disabled | Check: duration ≤ 11.8s, all slices ready, not processing |
+| Slice shows error | Try a different audio format (WAV usually works best) |
+| Classification wrong | Classification is just a suggestion—it doesn't affect the audio |
+
+### Sample Analyzer
+
+| Problem | Solution |
+|---------|----------|
+| "No APPL chunk" | File doesn't have OP-Z metadata—export from Drum Kit Creator first |
+| Silent playback | Click anywhere on the page to unlock audio |
+| Wrong boundaries | Visual positions use original frame count; metadata is accurate |
+
+### USB Browser
+
+| Problem | Solution |
+|---------|----------|
+| "Not supported" | Use Chrome, Edge, or another Chromium browser |
+| Can't see folders | Make sure you selected the OP-Z root folder |
+| Upload fails | Check OP-Z isn't write-protected or full |
+
+### General
+
+| Problem | Solution |
+|---------|----------|
+| Nothing loads | Refresh the page, check browser console for errors |
+| Slow performance | ffmpeg.wasm is large (~30MB)—first load takes time |
+| Audio cuts off | Total duration must be under 11.8 seconds |
 
 ---
 

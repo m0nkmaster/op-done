@@ -4,14 +4,14 @@ Technical documentation for OP Done development.
 
 ## Project Overview
 
-OP Done is a browser-based toolkit for Teenage Engineering OP-Z:
-- **Drum Kit Creator** — Build packs from audio samples
+OP Done is a browser-based synthesizer and sample pack toolkit:
+- **Synthesizer** — Full-featured Web Audio synth with MIDI and AI generation
+- **AI Kit Generator** — Generate complete 24-sound kits from text prompts
+- **Drum Kit Creator** — Build OP-Z packs from audio samples
 - **Sample Analyzer** — Inspect existing packs
-- **Synthesizer** — Full-featured synth with MIDI and AI
-- **AI Kit Generator** — Generate complete kits from text
 - **USB Browser** — Direct OP-Z file management
 
-All processing runs client-side using ffmpeg.wasm and Web Audio API.
+All processing runs client-side using Web Audio API and ffmpeg.wasm.
 
 ## Documentation
 
@@ -80,10 +80,10 @@ src/
 
 | Path | Page | Description |
 |------|------|-------------|
-| `/drum-creator` | DrumCreator | Build packs from samples |
-| `/sample-analyzer` | SampleAnalyzer | Inspect OP-Z packs |
 | `/synthesizer` | SynthesizerUI | Full synth with MIDI/AI |
 | `/ai-kit-generator` | AIKitGenerator | AI-powered kit creation |
+| `/drum-creator` | DrumCreator | Build packs from samples |
+| `/sample-analyzer` | SampleAnalyzer | Inspect OP-Z packs |
 | `/usb-browser` | USBBrowser | Direct device management |
 | `/visual-node-synth` | VisualNodeSynth | Experimental node editor |
 
