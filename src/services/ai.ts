@@ -65,8 +65,8 @@ RULES:
 - All fields except synthesis, envelope, timing, dynamics, metadata are optional
 - Return raw JSON only, no markdown`;
 
-// System prompt for drum batch generation (/ai-kit-generator page)
-const BATCH_SYSTEM_PROMPT = `You are a drum machine designer. Return JSON: { "configs": [...] }
+// System prompt for percussive sound batch generation (/ai-kit-generator page)
+const BATCH_SYSTEM_PROMPT = `You are a percussive sound designer. Return JSON: { "configs": [...] }
 
 SCHEMA for each config:
 {
@@ -94,10 +94,26 @@ SCHEMA for each config:
   "metadata": { "name": string, "category": string, "description": string, "tags": string[] }
 }
 
-DRUM GUIDELINES:
-- Instant attack (0.001-0.02s), short decay, sustain=0 or very low
+GUIDELINES:
+- Match envelope to sound type: kicks/snares need instant attack; cymbals/textures can have longer decay
 - NO delay or reverb effects (causes bleed in samplers)
 - Return raw JSON only, no markdown`;
+
+// Extract JSON from text that may have extra content before/after
+function extractJSON(text: string): Record<string, unknown> {
+  // Try direct parse first
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Find JSON object boundaries
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      return JSON.parse(text.slice(start, end + 1));
+    }
+    throw new Error('No valid JSON found in response');
+  }
+}
 
 function validateConfig(config: SoundConfig): void {
   config.synthesis.layers.forEach(layer => {
@@ -458,6 +474,7 @@ async function generateWithOpenAI(description: string): Promise<SoundConfig> {
   }
 
   const data = await response.json();
+  console.log('OpenAI generateWithOpenAI response:', JSON.stringify(data, null, 2));
   type OutputItem = { type: string; content?: { type: string; text?: string }[] };
   const outputText = data.output?.find((item: OutputItem) => item.type === 'message')
     ?.content?.find((c: { type: string; text?: string }) => c.type === 'output_text')?.text;
@@ -467,7 +484,7 @@ async function generateWithOpenAI(description: string): Promise<SoundConfig> {
     throw new Error('OpenAI: No text generated');
   }
   
-  const parsed = JSON.parse(outputText);
+  const parsed = extractJSON(outputText) as SoundConfig;
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('OpenAI: Invalid response format');
   }
@@ -507,7 +524,7 @@ async function generateWithGemini(description: string): Promise<SoundConfig> {
     throw new Error('Gemini: No text generated. Content may be blocked by safety settings.');
   }
 
-  const parsed = JSON.parse(text.trim());
+  const parsed = extractJSON(text.trim()) as SoundConfig;
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('Gemini: Invalid response format');
   }
@@ -564,6 +581,7 @@ async function batchGenerateWithOpenAI(ideas: SoundIdea[]): Promise<SoundConfig[
   }
 
   const data = await response.json();
+  console.log('OpenAI batchGenerateWithOpenAI response:', JSON.stringify(data, null, 2));
   type OutputItem = { type: string; content?: { type: string; text?: string }[] };
   const outputText = data.output?.find((item: OutputItem) => item.type === 'message')
     ?.content?.find((c: { type: string; text?: string }) => c.type === 'output_text')?.text;
@@ -573,8 +591,8 @@ async function batchGenerateWithOpenAI(ideas: SoundIdea[]): Promise<SoundConfig[
     throw new Error('OpenAI: No batch response generated');
   }
   
-  const parsed = JSON.parse(outputText);
-  const configs = parsed.configs || [];
+  const parsed = extractJSON(outputText);
+  const configs = (parsed.configs || []) as SoundConfig[];
   return configs.filter((c: unknown) => c !== null && typeof c === 'object');
 }
 
@@ -611,8 +629,8 @@ async function batchGenerateWithGemini(ideas: SoundIdea[]): Promise<SoundConfig[
     throw new Error('Gemini: No text generated');
   }
 
-  const parsed = JSON.parse(text.trim());
-  const configs = parsed.configs || [];
+  const parsed = extractJSON(text.trim());
+  const configs = (parsed.configs || []) as SoundConfig[];
   return configs.filter((c: unknown) => c !== null && typeof c === 'object');
 }
 
@@ -668,9 +686,10 @@ const KIT_PLAN_JSON_SCHEMA = {
 };
 
 // System prompt for kit planning (/ai-kit-generator page)
-const KIT_PLANNER_PROMPT = `You are a legendary drum kit curator and beat maker. You've assembled sample packs for iconic producers across hip-hop, electronic, and acoustic genres. You understand how kicks, snares, hats, and percussion work together rhythmically.
+// OP-Z limits: 24 sounds, each <4s, total <12s
+const KIT_PLANNER_PROMPT = `You are a sound designer specializing in percussive and rhythmic sounds. You create sample packs for producers across all genres.
 
-Design a cohesive 24-30 sound drum kit based on the user's theme. Each sound should be short (0.3-0.6s) since the total pack is limited to 12 seconds.`;
+Design a collection of exactly 24 sounds based on the user's theme. This could be a full drum kit, or a focused collection (all kicks, all cymbals, all textures, etc.) - follow what the user asks for. Each sound must be under 4 seconds. The total of all sounds must be under 12 seconds - plan for ~0.4-0.5s per sound on average.`;
 
 export interface KitPlan {
   kitName: string;
@@ -706,8 +725,8 @@ export async function planDrumKit(
     }
 
     if (!text) throw new Error('Gemini: No response generated');
-    const parsed = JSON.parse(text.trim());
-    return { kitName: parsed.kitName, sounds: parsed.sounds.slice(0, 30) };
+    const parsed = extractJSON(text.trim());
+    return { kitName: parsed.kitName as string, sounds: (parsed.sounds as SoundIdea[]).slice(0, 24) };
   } else {
     const apiKey = import.meta.env.VITE_OPENAI_KEY;
     if (!apiKey) throw new Error('VITE_OPENAI_KEY not set');
@@ -734,11 +753,12 @@ export async function planDrumKit(
     }
 
     const data = await response.json();
+    console.log('OpenAI planDrumKit response:', JSON.stringify(data, null, 2));
     type OutputItem = { type: string; content?: { type: string; text?: string }[] };
     const outputText = data.output?.find((item: OutputItem) => item.type === 'message')
       ?.content?.find((c: { type: string; text?: string }) => c.type === 'output_text')?.text;
     if (!outputText) throw new Error('OpenAI: No response generated');
-    const parsed = JSON.parse(outputText);
-    return { kitName: parsed.kitName, sounds: parsed.sounds.slice(0, 30) };
+    const parsed = extractJSON(outputText);
+    return { kitName: parsed.kitName as string, sounds: (parsed.sounds as SoundIdea[]).slice(0, 24) };
   }
 }

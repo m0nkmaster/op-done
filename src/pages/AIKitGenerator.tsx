@@ -100,7 +100,7 @@ export default function AIKitGenerator() {
     try {
       // Phase 1: Plan the kit (1 API call)
       const plan = await planDrumKit(prompt, provider);
-      setKitName(plan.kitName);
+      setKitName(plan.kitName || 'AI Kit');
       
       const initialSounds: GeneratedSound[] = plan.sounds.map(idea => ({
         idea,
@@ -317,7 +317,7 @@ export default function AIKitGenerator() {
     const url = URL.createObjectURL(finalBlob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${kitName.replace(/[^a-zA-Z0-9]/g, '_')}.aif`;
+    a.download = `${(kitName || 'AI_Kit').replace(/[^a-zA-Z0-9]/g, '_')}.aif`;
     a.click();
     URL.revokeObjectURL(url);
   };
