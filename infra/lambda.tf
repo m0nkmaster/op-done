@@ -28,7 +28,7 @@ resource "aws_lambda_function" "ai_handler" {
   role          = aws_iam_role.lambda.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
-  timeout       = 30
+  timeout       = 60
   memory_size   = 256
 
   # Placeholder - will be updated by CI/CD
