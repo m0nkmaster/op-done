@@ -320,15 +320,6 @@ function Btn({ children, active, onClick, color, small, size = 'small', TE }: { 
   );
 }
 
-function Section({ title, children, color, isMobile = false, TE }: { title: string; children: React.ReactNode; color?: string; isMobile?: boolean; TE: ReturnType<typeof createThemeTokens> }) {
-  return (
-    <div style={{ marginBottom: isMobile ? 16 : 12 }}>
-      <div style={{ fontSize: isMobile ? 10 : 8, color: color || TE.grey, fontWeight: 700, letterSpacing: 1, marginBottom: isMobile ? 10 : 6 }}>{title}</div>
-      {children}
-    </div>
-  );
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // SCOPE DISPLAY
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1370,7 +1361,8 @@ export function SynthesizerUI() {
             </div>
           </div>
 
-          {/* METADATA - Collapsible */}
+          {/* METADATA - Collapsible (desktop only - renders last on mobile) */}
+          {!isTablet && (
           <div style={{ background: TE.panel, borderRadius: 4, padding: isMobile ? 12 : 10, border: `1px solid ${TE.border}`, overflow: 'hidden' }}>
               <div
                 onClick={() => setShowMetadata(!showMetadata)}
@@ -1480,6 +1472,7 @@ export function SynthesizerUI() {
                 </div>
               </Collapse>
             </div>
+          )}
         </div>
 
         {/* RIGHT */}
@@ -1587,7 +1580,8 @@ export function SynthesizerUI() {
           </div>
 
           {/* EFFECTS */}
-          <Section title="EFFECTS" isMobile={isMobile} TE={TE}>
+          <div>
+            <div style={{ fontSize: isMobile ? 10 : 8, color: TE.grey, fontWeight: 700, letterSpacing: 1, marginBottom: isMobile ? 10 : 6 }}>EFFECTS</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 6 }}>
               <Effect name="EQ" on={!!config.effects.eq} onToggle={() => config.effects.eq ? updateEffects({ ...config.effects, eq: undefined }) : updateEffects({ ...config.effects, eq: { low: { frequency: 100, gain: 0 }, mid: { frequency: 1000, gain: 0, q: 1 }, high: { frequency: 8000, gain: 0 } } })} color={TE.cyan} isMobile={isMobile} toggleSize={toggleSize} TE={TE}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 6, width: '100%' }}>
@@ -1654,7 +1648,120 @@ export function SynthesizerUI() {
                 <MiniKnob value={(config.effects.gate?.release || 0.05) * 1000} min={5} max={500} onChange={v => updateEffects({ ...config.effects, gate: { ...config.effects.gate!, release: v / 1000 } })} label="REL" color={TE.green} size={knobSize} TE={TE} />
               </Effect>
             </div>
-          </Section>
+          </div>
+
+          {/* METADATA - Collapsible (mobile/tablet only - renders last in RIGHT column) */}
+          {isTablet && (
+            <div style={{ background: TE.panel, borderRadius: 4, padding: isMobile ? 12 : 10, border: `1px solid ${TE.border}`, overflow: 'hidden' }}>
+              <div
+                onClick={() => setShowMetadata(!showMetadata)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <span style={{ fontSize: isMobile ? 11 : 8, color: TE.grey, fontWeight: 700, letterSpacing: 1 }}>METADATA</span>
+                <span style={{
+                  fontSize: isMobile ? 12 : 10,
+                  color: TE.grey,
+                  transition: 'transform 0.2s ease',
+                  transform: showMetadata ? 'rotate(180deg)' : 'rotate(0deg)',
+                  opacity: 0.6,
+                }}>▾</span>
+              </div>
+              <Collapse in={showMetadata}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 8, marginTop: isMobile ? 12 : 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: isMobile ? 9 : 7, color: TE.grey, fontWeight: 700 }}>NAME</span>
+                    <input
+                      type="text"
+                      value={config.metadata.name}
+                      onChange={e => updateMetadata({ name: e.target.value })}
+                      placeholder="Sound name..."
+                      style={{
+                        padding: isMobile ? '8px 10px' : '5px 8px',
+                        background: TE.inputBg,
+                        border: `1px solid ${TE.border}`,
+                        borderRadius: 4,
+                        color: TE.black,
+                        fontSize: isMobile ? 11 : 9,
+                        width: '100%',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: isMobile ? 9 : 7, color: TE.grey, fontWeight: 700 }}>CATEGORY</span>
+                    <div style={{ display: 'flex', gap: isMobile ? 6 : 3, flexWrap: 'wrap' }}>
+                      {['kick', 'snare', 'hihat', 'tom', 'perc', 'bass', 'lead', 'pad', 'fx', 'other'].map(cat => (
+                        <Btn key={cat} active={config.metadata.category === cat} onClick={() => updateMetadata({ category: cat as SoundConfig['metadata']['category'] })} color={TE.pink} small size={btnSize} TE={TE}>{cat.toUpperCase()}</Btn>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: isMobile ? 9 : 7, color: TE.grey, fontWeight: 700 }}>DESCRIPTION</span>
+                    <textarea
+                      value={config.metadata.description}
+                      onChange={e => updateMetadata({ description: e.target.value })}
+                      placeholder="Describe the sound..."
+                      rows={2}
+                      style={{
+                        padding: isMobile ? '8px 10px' : '5px 8px',
+                        background: TE.inputBg,
+                        border: `1px solid ${TE.border}`,
+                        borderRadius: 4,
+                        color: TE.black,
+                        fontSize: isMobile ? 11 : 9,
+                        width: '100%',
+                        resize: 'vertical',
+                        fontFamily: 'inherit',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: isMobile ? 9 : 7, color: TE.grey, fontWeight: 700 }}>TAGS</span>
+                    <input
+                      type="text"
+                      value={config.metadata.tags.join(', ')}
+                      onChange={e => updateMetadata({ tags: e.target.value.split(',').map(t => t.trim()).filter(t => t) })}
+                      placeholder="tag1, tag2, tag3..."
+                      style={{
+                        padding: isMobile ? '8px 10px' : '5px 8px',
+                        background: TE.inputBg,
+                        border: `1px solid ${TE.border}`,
+                        borderRadius: 4,
+                        color: TE.black,
+                        fontSize: isMobile ? 11 : 9,
+                        width: '100%',
+                      }}
+                    />
+                    {config.metadata.tags.length > 0 && (
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                        {config.metadata.tags.map((tag, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              padding: '2px 6px',
+                              background: `${TE.cyan}20`,
+                              border: `1px solid ${TE.cyan}40`,
+                              borderRadius: 3,
+                              fontSize: isMobile ? 9 : 7,
+                              color: TE.cyan,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Collapse>
+            </div>
+          )}
 
         </div>
       </div>
