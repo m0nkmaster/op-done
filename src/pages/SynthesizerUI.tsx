@@ -1391,7 +1391,7 @@ export function SynthesizerUI() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 6 }}>
               {config.synthesis.layers.map((layer, i) => (
-                <LayerPanel key={i} layer={layer} index={i} selected={selectedLayer === i} onSelect={() => setSelectedLayer(i)} onUpdate={l => updateLayer(i, l)} onRemove={() => removeLayer(i)} canRemove={config.synthesis.layers.length > 1} isMobile={isMobile} isTablet={isTablet} knobSize={knobSize} btnSize={btnSize} toggleSize={toggleSize} TE={TE} />
+                <LayerPanel key={i} layer={layer} index={i} selected={selectedLayer === i} onSelect={() => setSelectedLayer(selectedLayer === i ? -1 : i)} onUpdate={l => updateLayer(i, l)} onRemove={() => removeLayer(i)} canRemove={config.synthesis.layers.length > 1} isMobile={isMobile} isTablet={isTablet} knobSize={knobSize} btnSize={btnSize} toggleSize={toggleSize} TE={TE} />
               ))}
             </div>
           </div>
