@@ -1199,6 +1199,7 @@ export function SynthesizerUI() {
             >
               <option value="gemini">Gemini</option>
               <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
             </select>
             <input
               type="text"

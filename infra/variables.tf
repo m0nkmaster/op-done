@@ -63,3 +63,21 @@ variable "gemini_model" {
   default     = "gemini-2.0-flash"
 }
 
+variable "anthropic_api_key" {
+  description = "Anthropic API key for Lambda"
+  type        = string
+  sensitive   = true
+  default     = ""
+
+  validation {
+    condition     = length(var.anthropic_api_key) > 0
+    error_message = "ANTHROPIC_API_KEY required. Run: export TF_VAR_anthropic_api_key=\"$ANTHROPIC_API_KEY\""
+  }
+}
+
+variable "anthropic_model" {
+  description = "Anthropic Claude model version"
+  type        = string
+  default     = "claude-sonnet-4-20250514"
+}
+

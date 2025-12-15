@@ -4,6 +4,7 @@
  */
 
 import type { SoundConfig } from '../types/soundConfig';
+import { BOUNDS } from '../types/soundConfig';
 import { PINK_NOISE } from '../config';
 
 // Type alias for either AudioContext or OfflineAudioContext
@@ -263,8 +264,8 @@ export function createFilter(
 ): BiquadFilterNode {
   const filter = ctx.createBiquadFilter();
   filter.type = config.type;
-  filter.frequency.value = Math.max(20, Math.min(20000, config.frequency));
-  filter.Q.value = Math.max(0.0001, config.q);
+  filter.frequency.value = Math.max(BOUNDS.filter.frequency.min, Math.min(BOUNDS.filter.frequency.max, config.frequency));
+  filter.Q.value = Math.max(BOUNDS.filter.q.min, config.q);
   if (config.gain !== undefined) {
     filter.gain.value = config.gain;
   }
@@ -281,8 +282,8 @@ export function createSaturation(
   const shaper = ctx.createWaveShaper();
   const curveSize = 256;
   const curve = new Float32Array(curveSize);
-  const drive = Math.max(0, Math.min(10, config.drive));
-  const mix = Math.max(0, Math.min(1, config.mix));
+  const drive = Math.max(BOUNDS.saturation.drive.min, Math.min(BOUNDS.saturation.drive.max, config.drive));
+  const mix = Math.max(BOUNDS.saturation.mix.min, Math.min(BOUNDS.saturation.mix.max, config.mix));
   
   for (let i = 0; i < curveSize; i++) {
     const x = (i - curveSize / 2) / (curveSize / 2);
@@ -322,8 +323,8 @@ export function createDistortion(
   const input = ctx.createGain();
   const output = ctx.createGain();
   
-  const amount = safe(config.amount, 0.5);
-  const mix = safe(config.mix, 0.5);
+  const amount = Math.max(BOUNDS.distortion.amount.min, Math.min(BOUNDS.distortion.amount.max, safe(config.amount, 0.5)));
+  const mix = Math.max(BOUNDS.distortion.mix.min, Math.min(BOUNDS.distortion.mix.max, safe(config.mix, 0.5)));
   const type = config.type || 'soft';
   
   // Bitcrush uses sample rate reduction, others use waveshaping
@@ -422,9 +423,9 @@ export function createDelay(
   const input = ctx.createGain();
   const output = ctx.createGain();
   
-  const time = Math.min(2, Math.max(0.001, config.time));
-  const feedbackValue = Math.min(0.9, Math.max(0, config.feedback));
-  const mix = Math.max(0, Math.min(1, config.mix));
+  const time = Math.max(BOUNDS.delay.time.min, Math.min(BOUNDS.delay.time.max, config.time));
+  const feedbackValue = Math.max(BOUNDS.delay.feedback.min, Math.min(BOUNDS.delay.feedback.max, config.feedback));
+  const mix = Math.max(BOUNDS.delay.mix.min, Math.min(BOUNDS.delay.mix.max, config.mix));
   
   const dryGain = ctx.createGain();
   const wetGain = ctx.createGain();
@@ -464,9 +465,9 @@ export function createReverb(
   const input = ctx.createGain();
   const output = ctx.createGain();
   
-  const decay = Math.min(5, Math.max(0.1, config.decay));
-  const damping = Math.max(0, Math.min(1, config.damping));
-  const mix = Math.max(0, Math.min(1, config.mix));
+  const decay = Math.max(BOUNDS.reverb.decay.min, Math.min(BOUNDS.reverb.decay.max, config.decay));
+  const damping = Math.max(BOUNDS.reverb.damping.min, Math.min(BOUNDS.reverb.damping.max, config.damping));
+  const mix = Math.max(BOUNDS.reverb.mix.min, Math.min(BOUNDS.reverb.mix.max, config.mix));
   
   // Create impulse response
   const length = Math.floor(ctx.sampleRate * decay);
@@ -505,11 +506,11 @@ export function createCompressor(
   config: { threshold?: number; ratio?: number; attack?: number; release?: number; knee?: number }
 ): DynamicsCompressorNode {
   const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = Math.max(-100, Math.min(0, safe(config.threshold, -12)));
-  comp.ratio.value = Math.max(1, Math.min(20, safe(config.ratio, 4)));
-  comp.attack.value = Math.max(0, Math.min(1, safe(config.attack, 0.003)));
-  comp.release.value = Math.max(0, Math.min(1, safe(config.release, 0.25)));
-  comp.knee.value = safe(config.knee, 30);
+  comp.threshold.value = Math.max(BOUNDS.compressor.threshold.min, Math.min(BOUNDS.compressor.threshold.max, safe(config.threshold, -12)));
+  comp.ratio.value = Math.max(BOUNDS.compressor.ratio.min, Math.min(BOUNDS.compressor.ratio.max, safe(config.ratio, 4)));
+  comp.attack.value = Math.max(BOUNDS.compressor.attack.min, Math.min(BOUNDS.compressor.attack.max, safe(config.attack, 0.003)));
+  comp.release.value = Math.max(BOUNDS.compressor.release.min, Math.min(BOUNDS.compressor.release.max, safe(config.release, 0.25)));
+  comp.knee.value = Math.max(BOUNDS.compressor.knee.min, Math.min(BOUNDS.compressor.knee.max, safe(config.knee, 30)));
   return comp;
 }
 
@@ -530,9 +531,9 @@ export function applyPitchEnvelope(
   const peakMultiplier = Math.pow(2, amount / 1200);
   const sustainMultiplier = Math.pow(2, sustain / 1200);
   
-  const peakFreq = Math.max(20, Math.min(20000, baseFrequency * peakMultiplier));
-  const sustainFreq = Math.max(20, Math.min(20000, baseFrequency * sustainMultiplier));
-  const safeBaseFreq = Math.max(20, baseFrequency);
+  const peakFreq = Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, baseFrequency * peakMultiplier));
+  const sustainFreq = Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, baseFrequency * sustainMultiplier));
+  const safeBaseFreq = Math.max(BOUNDS.oscillator.frequency.min, baseFrequency);
   
   const safeAttack = Math.max(0.001, attack);
   const safeDecay = Math.max(0.001, decay);
@@ -567,9 +568,9 @@ export function applyPitchEnvelopeRealtime(
   const peakMultiplier = Math.pow(2, amount / 1200);
   const sustainMultiplier = Math.pow(2, sustain / 1200);
   
-  const peakFreq = Math.max(20, Math.min(20000, baseFrequency * peakMultiplier));
-  const sustainFreq = Math.max(20, Math.min(20000, baseFrequency * sustainMultiplier));
-  const safeBaseFreq = Math.max(20, baseFrequency);
+  const peakFreq = Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, baseFrequency * peakMultiplier));
+  const sustainFreq = Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, baseFrequency * sustainMultiplier));
+  const safeBaseFreq = Math.max(BOUNDS.oscillator.frequency.min, baseFrequency);
   
   const safeAttack = Math.max(0.001, attack);
   const safeDecay = Math.max(0.001, decay);
@@ -597,11 +598,11 @@ export function createChorus(
   const output = ctx.createGain();
   const sources: OscillatorNode[] = [];
   
-  const rate = Math.max(0.1, Math.min(10, config.rate));
-  const depth = Math.max(0, Math.min(1, config.depth));
-  const mix = Math.max(0, Math.min(1, config.mix));
-  const feedback = Math.max(0, Math.min(0.9, config.feedback ?? 0));
-  const baseDelay = Math.max(1, Math.min(50, config.delay ?? 20)) / 1000; // ms to seconds
+  const rate = Math.max(BOUNDS.chorus.rate.min, Math.min(BOUNDS.chorus.rate.max, config.rate));
+  const depth = Math.max(BOUNDS.chorus.depth.min, Math.min(BOUNDS.chorus.depth.max, config.depth));
+  const mix = Math.max(BOUNDS.chorus.mix.min, Math.min(BOUNDS.chorus.mix.max, config.mix));
+  const feedback = Math.max(BOUNDS.chorus.feedback.min, Math.min(BOUNDS.chorus.feedback.max, config.feedback ?? 0));
+  const baseDelay = Math.max(BOUNDS.chorus.delay.min, Math.min(BOUNDS.chorus.delay.max, config.delay ?? 20)) / 1000; // ms to seconds
   
   // Dry path
   const dryGain = ctx.createGain();
@@ -683,21 +684,21 @@ export function createEQ(
   // Low band - lowshelf filter
   const lowBand = ctx.createBiquadFilter();
   lowBand.type = 'lowshelf';
-  lowBand.frequency.value = Math.max(20, Math.min(2000, config.low.frequency));
-  lowBand.gain.value = Math.max(-24, Math.min(24, config.low.gain));
+  lowBand.frequency.value = Math.max(BOUNDS.eq.low.frequency.min, Math.min(BOUNDS.eq.low.frequency.max, config.low.frequency));
+  lowBand.gain.value = Math.max(BOUNDS.eq.gain.min, Math.min(BOUNDS.eq.gain.max, config.low.gain));
   
   // Mid band - peaking filter
   const midBand = ctx.createBiquadFilter();
   midBand.type = 'peaking';
-  midBand.frequency.value = Math.max(100, Math.min(10000, config.mid.frequency));
-  midBand.Q.value = Math.max(0.1, Math.min(10, config.mid.q ?? 1));
-  midBand.gain.value = Math.max(-24, Math.min(24, config.mid.gain));
+  midBand.frequency.value = Math.max(BOUNDS.eq.mid.frequency.min, Math.min(BOUNDS.eq.mid.frequency.max, config.mid.frequency));
+  midBand.Q.value = Math.max(BOUNDS.eq.q.min, Math.min(BOUNDS.eq.q.max, config.mid.q ?? 1));
+  midBand.gain.value = Math.max(BOUNDS.eq.gain.min, Math.min(BOUNDS.eq.gain.max, config.mid.gain));
   
   // High band - highshelf filter
   const highBand = ctx.createBiquadFilter();
   highBand.type = 'highshelf';
-  highBand.frequency.value = Math.max(1000, Math.min(20000, config.high.frequency));
-  highBand.gain.value = Math.max(-24, Math.min(24, config.high.gain));
+  highBand.frequency.value = Math.max(BOUNDS.eq.high.frequency.min, Math.min(BOUNDS.eq.high.frequency.max, config.high.frequency));
+  highBand.gain.value = Math.max(BOUNDS.eq.gain.min, Math.min(BOUNDS.eq.gain.max, config.high.gain));
   
   // Chain: input -> low -> mid -> high -> output
   input.connect(lowBand);
@@ -808,14 +809,14 @@ export function applyFilterEnvelope(
   startTime: number
 ): { baseFreq: number; sustainFreq: number } {
   const amount = envelope.amount;
-  const sustainLevel = Math.max(0, Math.min(1, envelope.sustain));
+  const sustainLevel = Math.max(BOUNDS.envelope.sustain.min, Math.min(BOUNDS.envelope.sustain.max, envelope.sustain));
   
-  const safeAttack = Math.max(0.001, envelope.attack);
-  const safeDecay = Math.max(0.001, envelope.decay);
+  const safeAttack = Math.max(BOUNDS.envelope.attack.min, envelope.attack);
+  const safeDecay = Math.max(BOUNDS.envelope.decay.min, envelope.decay);
   
-  const startFreq = Math.max(20, baseFreq);
-  const peakFreq = Math.max(20, Math.min(20000, baseFreq + amount));
-  const sustainFreq = Math.max(20, baseFreq + (amount * sustainLevel));
+  const startFreq = Math.max(BOUNDS.filter.frequency.min, baseFreq);
+  const peakFreq = Math.max(BOUNDS.filter.frequency.min, Math.min(BOUNDS.filter.frequency.max, baseFreq + amount));
+  const sustainFreq = Math.max(BOUNDS.filter.frequency.min, baseFreq + (amount * sustainLevel));
   
   param.setValueAtTime(startFreq, startTime);
   param.exponentialRampToValueAtTime(peakFreq, startTime + safeAttack);
@@ -833,8 +834,8 @@ export function applyFilterReleaseEnvelope(
   releaseTime: number,
   now: number
 ): void {
-  const safeRelease = Math.max(0.001, releaseTime);
-  const targetFreq = Math.max(20, baseFreq);
+  const safeRelease = Math.max(BOUNDS.envelope.release.min, releaseTime);
+  const targetFreq = Math.max(BOUNDS.filter.frequency.min, baseFreq);
   
   param.cancelScheduledValues(now);
   param.setValueAtTime(param.value, now);
@@ -866,10 +867,10 @@ export function createLFO(
   startTime: number
 ): { output: AudioNode | null; sources: AudioScheduledSourceNode[] } {
   const sources: AudioScheduledSourceNode[] = [];
-  const delay = safe(lfo.delay, 0);
-  const fade = safe(lfo.fade, 0);
-  const safeFreq = safe(lfo.frequency, 1);
-  const safeDepth = safe(lfo.depth, 0.5);
+  const delay = Math.max(BOUNDS.lfo.delay.min, Math.min(BOUNDS.lfo.delay.max, safe(lfo.delay, 0)));
+  const fade = Math.max(BOUNDS.lfo.fade.min, Math.min(BOUNDS.lfo.fade.max, safe(lfo.fade, 0)));
+  const safeFreq = Math.max(BOUNDS.lfo.frequency.min, Math.min(BOUNDS.lfo.frequency.max, safe(lfo.frequency, 1)));
+  const safeDepth = Math.max(BOUNDS.lfo.depth.min, Math.min(BOUNDS.lfo.depth.max, safe(lfo.depth, 0.5)));
 
   // Create LFO source
   let lfoSource: AudioScheduledSourceNode;

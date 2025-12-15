@@ -73,7 +73,7 @@ export const BOUNDS = {
     mix: { min: 0, max: 1 },
   },
   reverb: {
-    decay: { min: 0.1, max: 10 },
+    decay: { min: 0.1, max: 5 },  // Synth caps at 5s for performance
     damping: { min: 0, max: 1 },
     mix: { min: 0, max: 1 },
   },
@@ -110,8 +110,12 @@ export const BOUNDS = {
   },
   eq: {
     gain: { min: -24, max: 24 },
-    frequency: { min: 20, max: 20000 },
+    frequency: { min: 20, max: 20000 },  // General range for Zod validation
     q: { min: 0.1, max: 10 },
+    // Per-band frequency limits (synth clamps to these ranges)
+    low: { frequency: { min: 20, max: 2000 } },
+    mid: { frequency: { min: 100, max: 10000 } },
+    high: { frequency: { min: 1000, max: 20000 } },
   },
   timing: {
     duration: { min: 0.1, max: 12 },
@@ -419,7 +423,7 @@ export const DEFAULT_SOUND_CONFIG: SoundConfig = {
           waveform: 'sawtooth',
           frequency: 440,
           detune: 0,
-          unison: { voices: 2, detune: 0.05, spread: 0.2 },
+          unison: { voices: 2, detune: 15, spread: 0.2 },
         },
         filter: {
           type: 'lowpass',
@@ -487,99 +491,124 @@ export const DEFAULT_SOUND_CONFIG: SoundConfig = {
 };
 
 // ============================================================================
-// JSON Schema for AI Prompts
+// JSON Schema for AI Prompts (auto-generated from enums + BOUNDS)
 // ============================================================================
+
+/** Helper to format enum values as "a"|"b"|"c" */
+function enumStr(zodEnum: { options: readonly string[] }): string {
+  return zodEnum.options.map(v => `"${v}"`).join('|');
+}
+
+/** Helper to format bounds as (min-max) */
+function range(bounds: { min: number; max: number }, unit = ''): string {
+  return `(${bounds.min}-${bounds.max}${unit ? ' ' + unit : ''})`;
+}
 
 /**
  * Generates a human-readable schema string for AI prompts
+ * Auto-generated from Zod enums and BOUNDS - no manual duplication
  */
 export function generateSchemaPrompt(): string {
   const b = BOUNDS;
-  return `{
+  return `STRICT RULES:
+- ONLY use exact enum values shown below - do not invent alternatives
+- Keep all numbers within specified bounds
+- Return raw JSON only, no markdown
+
+SCHEMA:
+{
   "synthesis": {
     "layers": [{
-      "type": "oscillator" | "fm" | "noise" | "karplus-strong",
-      "gain": number (${b.gain.min}-${b.gain.max}),
-      "envelope": { "attack": number (${b.envelope.attack.min}-${b.envelope.attack.max}s), "decay": number (${b.envelope.decay.min}-${b.envelope.decay.max}s), "sustain": number (${b.envelope.sustain.min}-${b.envelope.sustain.max}), "release": number (${b.envelope.release.min}-${b.envelope.release.max}s) },
+      "type": ${enumStr(layerTypeEnum)},
+      "gain": number ${range(b.gain)},
+      "envelope": { "attack": number ${range(b.envelope.attack, 's')}, "decay": number ${range(b.envelope.decay, 's')}, "sustain": number ${range(b.envelope.sustain)}, "release": number ${range(b.envelope.release, 's')} },
       "filter": {
-        "type": "lowpass"|"highpass"|"bandpass"|"notch",
-        "frequency": number (${b.filter.frequency.min}-${b.filter.frequency.max} Hz),
-        "q": number (${b.filter.q.min}-${b.filter.q.max}),
-        "envelope": { "amount": number (${b.filter.envelopeAmount.min}-${b.filter.envelopeAmount.max} Hz), "attack": number, "decay": number, "sustain": number (0-1), "release": number }
+        "type": ${enumStr(filterTypeEnum)},
+        "frequency": number ${range(b.filter.frequency, 'Hz')},
+        "q": number ${range(b.filter.q)},
+        "envelope": { "amount": number ${range(b.filter.envelopeAmount, 'Hz')}, "attack": number, "decay": number, "sustain": number (0-1), "release": number }
       },
-      "saturation": { "type": "soft"|"hard"|"tube"|"tape", "drive": number (${b.saturation.drive.min}-${b.saturation.drive.max}), "mix": number (${b.saturation.mix.min}-${b.saturation.mix.max}) },
+      "saturation": { "type": ${enumStr(saturationTypeEnum)}, "drive": number ${range(b.saturation.drive)}, "mix": number ${range(b.saturation.mix)} },
       "oscillator": {
-        "waveform": "sine"|"square"|"sawtooth"|"triangle",
-        "frequency": number (${b.oscillator.frequency.min}-${b.oscillator.frequency.max} Hz),
-        "detune": number (${b.oscillator.detune.min}-${b.oscillator.detune.max} cents),
-        "unison": { "voices": number (${b.unison.voices.min}-${b.unison.voices.max}), "detune": number (${b.unison.detune.min}-${b.unison.detune.max} cents), "spread": number (${b.unison.spread.min}-${b.unison.spread.max}) },
-        "sub": { "level": number (${b.sub.level.min}-${b.sub.level.max}), "octave": -1 | -2, "waveform": "sine"|"square"|"triangle" },
-        "pitchEnvelope": { "amount": number (${b.pitchEnvelope.amount.min}-${b.pitchEnvelope.amount.max} cents), "attack": number (${b.pitchEnvelope.attack.min}-${b.pitchEnvelope.attack.max}s), "decay": number (${b.pitchEnvelope.decay.min}-${b.pitchEnvelope.decay.max}s), "sustain": number (${b.pitchEnvelope.sustain.min}-${b.pitchEnvelope.sustain.max} cents), "release": number (${b.pitchEnvelope.release.min}-${b.pitchEnvelope.release.max}s) }
+        "waveform": ${enumStr(waveformEnum)},
+        "frequency": number ${range(b.oscillator.frequency, 'Hz')},
+        "detune": number ${range(b.oscillator.detune, 'cents')},
+        "unison": { "voices": number ${range(b.unison.voices)}, "detune": number ${range(b.unison.detune, 'cents')}, "spread": number ${range(b.unison.spread)} },
+        "sub": { "level": number ${range(b.sub.level)}, "octave": -1 | -2, "waveform": "sine"|"square"|"triangle" },
+        "pitchEnvelope": { "amount": number ${range(b.pitchEnvelope.amount, 'cents')}, "attack": number ${range(b.pitchEnvelope.attack, 's')}, "decay": number ${range(b.pitchEnvelope.decay, 's')}, "sustain": number ${range(b.pitchEnvelope.sustain, 'cents')}, "release": number ${range(b.pitchEnvelope.release, 's')} }
       },
-      "fm": { "carrier": number (${b.fm.carrier.min}-${b.fm.carrier.max} Hz), "modulator": number (${b.fm.modulator.min}-${b.fm.modulator.max} Hz), "modulationIndex": number (${b.fm.modulationIndex.min}-${b.fm.modulationIndex.max}) },
-      "noise": { "type": "white"|"pink"|"brown" },
-      "karplus": { "frequency": number (${b.karplus.frequency.min}-${b.karplus.frequency.max} Hz), "damping": number (${b.karplus.damping.min}-${b.karplus.damping.max}) }
+      "fm": { "carrier": number ${range(b.fm.carrier, 'Hz')}, "modulator": number ${range(b.fm.modulator, 'Hz')}, "modulationIndex": number ${range(b.fm.modulationIndex)} },
+      "noise": { "type": ${enumStr(noiseTypeEnum)} },
+      "karplus": { "frequency": number ${range(b.karplus.frequency, 'Hz')}, "damping": number ${range(b.karplus.damping)} }
     }]
   },
-  "envelope": { "attack": number (${b.envelope.attack.min}-${b.envelope.attack.max}s), "decay": number (${b.envelope.decay.min}-${b.envelope.decay.max}s), "sustain": number (${b.envelope.sustain.min}-${b.envelope.sustain.max}), "release": number (${b.envelope.release.min}-${b.envelope.release.max}s) },
+  "envelope": { "attack": number ${range(b.envelope.attack, 's')}, "decay": number ${range(b.envelope.decay, 's')}, "sustain": number ${range(b.envelope.sustain)}, "release": number ${range(b.envelope.release, 's')} },
   "filter": {
-    "type": "lowpass"|"highpass"|"bandpass"|"notch"|"allpass"|"peaking",
-    "frequency": number (${b.filter.frequency.min}-${b.filter.frequency.max} Hz),
-    "q": number (${b.filter.q.min}-${b.filter.q.max}),
+    "type": ${enumStr(globalFilterTypeEnum)},
+    "frequency": number ${range(b.filter.frequency, 'Hz')},
+    "q": number ${range(b.filter.q)},
     "gain": number (dB, for peaking),
-    "envelope": { "amount": number (${b.filter.envelopeAmount.min}-${b.filter.envelopeAmount.max} Hz), "attack": number, "decay": number, "sustain": number (0-1), "release": number }
+    "envelope": { "amount": number ${range(b.filter.envelopeAmount, 'Hz')}, "attack": number, "decay": number, "sustain": number (0-1), "release": number }
   },
   "lfo": {
-    "waveform": "sine"|"square"|"sawtooth"|"triangle"|"random",
-    "frequency": number (${b.lfo.frequency.min}-${b.lfo.frequency.max} Hz),
-    "depth": number (${b.lfo.depth.min}-${b.lfo.depth.max}),
-    "target": "pitch"|"filter"|"amplitude"|"pan",
-    "delay": number (${b.lfo.delay.min}-${b.lfo.delay.max}s),
-    "fade": number (${b.lfo.fade.min}-${b.lfo.fade.max}s)
+    "waveform": ${enumStr(lfoWaveformEnum)},
+    "frequency": number ${range(b.lfo.frequency, 'Hz')},
+    "depth": number ${range(b.lfo.depth)},
+    "target": ${enumStr(lfoTargetEnum)},
+    "delay": number ${range(b.lfo.delay, 's')},
+    "fade": number ${range(b.lfo.fade, 's')}
   },
   "effects": {
-    "distortion": { "type": "soft"|"hard"|"fuzz"|"bitcrush"|"waveshaper", "amount": number (${b.distortion.amount.min}-${b.distortion.amount.max}), "mix": number (${b.distortion.mix.min}-${b.distortion.mix.max}) },
-    "reverb": { "decay": number (${b.reverb.decay.min}-${b.reverb.decay.max}s), "damping": number (${b.reverb.damping.min}-${b.reverb.damping.max}), "mix": number (${b.reverb.mix.min}-${b.reverb.mix.max}) },
-    "delay": { "time": number (${b.delay.time.min}-${b.delay.time.max}s), "feedback": number (${b.delay.feedback.min}-${b.delay.feedback.max}), "mix": number (${b.delay.mix.min}-${b.delay.mix.max}) },
-    "compressor": { "threshold": number (${b.compressor.threshold.min}-${b.compressor.threshold.max} dB), "ratio": number (${b.compressor.ratio.min}-${b.compressor.ratio.max}), "attack": number (${b.compressor.attack.min}-${b.compressor.attack.max}s), "release": number (${b.compressor.release.min}-${b.compressor.release.max}s), "knee": number (${b.compressor.knee.min}-${b.compressor.knee.max} dB) },
-    "gate": { "attack": number (${b.gate.attack.min}-${b.gate.attack.max}s), "hold": number (${b.gate.hold.min}-${b.gate.hold.max}s), "release": number (${b.gate.release.min}-${b.gate.release.max}s) },
-    "chorus": { "rate": number (${b.chorus.rate.min}-${b.chorus.rate.max} Hz), "depth": number (${b.chorus.depth.min}-${b.chorus.depth.max}), "mix": number (${b.chorus.mix.min}-${b.chorus.mix.max}), "feedback": number (${b.chorus.feedback.min}-${b.chorus.feedback.max}), "delay": number (${b.chorus.delay.min}-${b.chorus.delay.max} ms, 1-5=flanger, 20-50=chorus) },
-    "eq": { "low": { "frequency": number, "gain": number (${b.eq.gain.min}-${b.eq.gain.max} dB) }, "mid": { "frequency": number, "gain": number (${b.eq.gain.min}-${b.eq.gain.max} dB), "q": number (${b.eq.q.min}-${b.eq.q.max}) }, "high": { "frequency": number, "gain": number (${b.eq.gain.min}-${b.eq.gain.max} dB) } }
+    "distortion": { "type": ${enumStr(distortionTypeEnum)}, "amount": number ${range(b.distortion.amount)}, "mix": number ${range(b.distortion.mix)} },
+    "reverb": { "decay": number ${range(b.reverb.decay, 's')}, "damping": number ${range(b.reverb.damping)}, "mix": number ${range(b.reverb.mix)} },
+    "delay": { "time": number ${range(b.delay.time, 's')}, "feedback": number ${range(b.delay.feedback)}, "mix": number ${range(b.delay.mix)} },
+    "compressor": { "threshold": number ${range(b.compressor.threshold, 'dB')}, "ratio": number ${range(b.compressor.ratio)}, "attack": number ${range(b.compressor.attack, 's')}, "release": number ${range(b.compressor.release, 's')}, "knee": number ${range(b.compressor.knee, 'dB')} },
+    "gate": { "attack": number ${range(b.gate.attack, 's')}, "hold": number ${range(b.gate.hold, 's')}, "release": number ${range(b.gate.release, 's')} },
+    "chorus": { "rate": number ${range(b.chorus.rate, 'Hz')}, "depth": number ${range(b.chorus.depth)}, "mix": number ${range(b.chorus.mix)}, "feedback": number ${range(b.chorus.feedback)}, "delay": number ${range(b.chorus.delay, 'ms')} (1-5=flanger, 20-50=chorus) },
+    "eq": { "low": { "frequency": number (20-2000 Hz), "gain": number ${range(b.eq.gain, 'dB')} }, "mid": { "frequency": number (100-10000 Hz), "gain": number ${range(b.eq.gain, 'dB')}, "q": number ${range(b.eq.q)} }, "high": { "frequency": number (1000-20000 Hz), "gain": number ${range(b.eq.gain, 'dB')} } }
   },
-  "timing": { "duration": number (${b.timing.duration.min}-${b.timing.duration.max}s) },
-  "dynamics": { "velocity": number (${b.dynamics.velocity.min}-${b.dynamics.velocity.max}), "normalize": boolean },
-  "metadata": { "name": string, "category": "kick"|"snare"|"hihat"|"tom"|"perc"|"bass"|"lead"|"pad"|"fx"|"other", "description": string, "tags": string[] }
+  "timing": { "duration": number ${range(b.timing.duration, 's')} },
+  "dynamics": { "velocity": number ${range(b.dynamics.velocity)}, "normalize": boolean },
+  "metadata": { "name": string, "category": ${enumStr(categoryEnum)}, "description": string, "tags": string[] }
 }`;
 }
 
 /**
  * Generates a compact schema for batch/percussive prompts
+ * Auto-generated from Zod enums and BOUNDS - no manual duplication
  */
 export function generateBatchSchemaPrompt(): string {
   const b = BOUNDS;
-  return `{
+  return `STRICT RULES:
+- ONLY use exact enum values shown below - do not invent alternatives
+- Keep all numbers within specified bounds
+- Return raw JSON only, no markdown
+
+SCHEMA:
+{
   "synthesis": {
     "layers": [{
-      "type": "oscillator" | "fm" | "noise",
-      "gain": number (${b.gain.min}-${b.gain.max}),
-      "envelope": { "attack": number, "decay": number, "sustain": number (0-1), "release": number },
-      "filter": { "type": "lowpass"|"highpass"|"bandpass"|"notch", "frequency": number, "q": number, "envelope": { "amount": number, "attack": number, "decay": number, "sustain": number, "release": number } },
-      "saturation": { "type": "soft"|"hard"|"tube"|"tape", "drive": number (0-10), "mix": number (0-1) },
-      "oscillator": { "waveform": "sine"|"square"|"sawtooth"|"triangle", "frequency": number, "detune": number, "pitchEnvelope": { "amount": number (cents), "attack": number, "decay": number, "sustain": number (cents), "release": number } },
-      "fm": { "carrier": number, "modulator": number, "modulationIndex": number },
-      "noise": { "type": "white"|"pink"|"brown" }
+      "type": ${enumStr(layerTypeEnum)},
+      "gain": number ${range(b.gain)},
+      "envelope": { "attack": number ${range(b.envelope.attack, 's')}, "decay": number ${range(b.envelope.decay, 's')}, "sustain": number ${range(b.envelope.sustain)}, "release": number ${range(b.envelope.release, 's')} },
+      "filter": { "type": ${enumStr(filterTypeEnum)}, "frequency": number ${range(b.filter.frequency, 'Hz')}, "q": number ${range(b.filter.q)}, "envelope": { "amount": number ${range(b.filter.envelopeAmount, 'Hz')}, "attack": number, "decay": number, "sustain": number, "release": number } },
+      "saturation": { "type": ${enumStr(saturationTypeEnum)}, "drive": number ${range(b.saturation.drive)}, "mix": number ${range(b.saturation.mix)} },
+      "oscillator": { "waveform": ${enumStr(waveformEnum)}, "frequency": number ${range(b.oscillator.frequency, 'Hz')}, "detune": number ${range(b.oscillator.detune, 'cents')}, "pitchEnvelope": { "amount": number ${range(b.pitchEnvelope.amount, 'cents')}, "attack": number, "decay": number, "sustain": number (cents), "release": number } },
+      "fm": { "carrier": number ${range(b.fm.carrier, 'Hz')}, "modulator": number ${range(b.fm.modulator, 'Hz')}, "modulationIndex": number ${range(b.fm.modulationIndex)} },
+      "noise": { "type": ${enumStr(noiseTypeEnum)} },
+      "karplus": { "frequency": number ${range(b.karplus.frequency, 'Hz')}, "damping": number ${range(b.karplus.damping)} }
     }]
   },
-  "envelope": { "attack": number, "decay": number, "sustain": number (0-1), "release": number },
-  "filter": { "type": "lowpass"|"highpass"|"bandpass"|"notch", "frequency": number, "q": number, "envelope": { "amount": number, "attack": number, "decay": number, "sustain": number, "release": number } },
+  "envelope": { "attack": number ${range(b.envelope.attack, 's')}, "decay": number ${range(b.envelope.decay, 's')}, "sustain": number ${range(b.envelope.sustain)}, "release": number ${range(b.envelope.release, 's')} },
+  "filter": { "type": ${enumStr(globalFilterTypeEnum)}, "frequency": number ${range(b.filter.frequency, 'Hz')}, "q": number ${range(b.filter.q)}, "envelope": { "amount": number ${range(b.filter.envelopeAmount, 'Hz')}, "attack": number, "decay": number, "sustain": number, "release": number } },
   "effects": {
-    "distortion": { "type": "soft"|"hard"|"fuzz"|"bitcrush", "amount": number (0-1), "mix": number (0-1) },
-    "compressor": { "threshold": number (dB), "ratio": number, "attack": number, "release": number },
-    "chorus": { "rate": number (Hz), "depth": number (0-1), "mix": number (0-1), "feedback": number (0-0.9), "delay": number (ms, 1-5=flanger, 20-50=chorus) },
-    "eq": { "low": { "frequency": number, "gain": number (dB) }, "mid": { "frequency": number, "gain": number (dB), "q": number }, "high": { "frequency": number, "gain": number (dB) } }
+    "distortion": { "type": ${enumStr(distortionTypeEnum)}, "amount": number ${range(b.distortion.amount)}, "mix": number ${range(b.distortion.mix)} },
+    "compressor": { "threshold": number ${range(b.compressor.threshold, 'dB')}, "ratio": number ${range(b.compressor.ratio)}, "attack": number ${range(b.compressor.attack, 's')}, "release": number ${range(b.compressor.release, 's')}, "knee": number ${range(b.compressor.knee, 'dB')} },
+    "chorus": { "rate": number ${range(b.chorus.rate, 'Hz')}, "depth": number ${range(b.chorus.depth)}, "mix": number ${range(b.chorus.mix)}, "feedback": number ${range(b.chorus.feedback)}, "delay": number ${range(b.chorus.delay, 'ms')} (1-5=flanger, 20-50=chorus) },
+    "eq": { "low": { "frequency": number (20-2000 Hz), "gain": number ${range(b.eq.gain, 'dB')} }, "mid": { "frequency": number (100-10000 Hz), "gain": number ${range(b.eq.gain, 'dB')}, "q": number ${range(b.eq.q)} }, "high": { "frequency": number (1000-20000 Hz), "gain": number ${range(b.eq.gain, 'dB')} } }
   },
-  "timing": { "duration": number (0.05-0.5s for drums) },
-  "dynamics": { "velocity": number (0-1), "normalize": true },
-  "metadata": { "name": string, "category": string, "description": string, "tags": string[] }
+  "timing": { "duration": number ${range(b.timing.duration, 's')} },
+  "dynamics": { "velocity": number ${range(b.dynamics.velocity)}, "normalize": boolean },
+  "metadata": { "name": string, "category": ${enumStr(categoryEnum)}, "description": string, "tags": string[] }
 }`;
 }

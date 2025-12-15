@@ -1,10 +1,11 @@
 /**
- * AI request handler - proxies requests to OpenAI and Gemini
+ * AI request handler - proxies requests to OpenAI, Gemini, and Anthropic
  */
 
 import { GoogleGenAI } from '@google/genai';
+import Anthropic from '@anthropic-ai/sdk';
 
-export type AIProvider = 'openai' | 'gemini';
+export type AIProvider = 'openai' | 'gemini' | 'anthropic';
 export type AIAction = 'generate' | 'batch' | 'plan';
 
 export interface AIRequestBody {
@@ -21,6 +22,9 @@ export interface AIRequestBody {
 export interface AIResponse {
   text: string;
 }
+
+// Temperature for Anthropic (OpenAI responses API and Gemini don't support it reliably)
+const ANTHROPIC_TEMPERATURE = 0.7;
 
 function getOpenAIKey(): string {
   const key = process.env.OPENAI_API_KEY;
@@ -40,6 +44,16 @@ function getOpenAIModel(): string {
 
 function getGeminiModel(): string {
   return process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+}
+
+function getAnthropicKey(): string {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error('ANTHROPIC_API_KEY not set');
+  return key;
+}
+
+function getAnthropicModel(): string {
+  return process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
 }
 
 async function callOpenAI(
@@ -135,6 +149,29 @@ async function callGemini(
   return text;
 }
 
+async function callAnthropic(
+  prompt: string,
+  systemPrompt: string
+): Promise<string> {
+  const client = new Anthropic({ apiKey: getAnthropicKey() });
+
+  const message = await client.messages.create({
+    model: getAnthropicModel(),
+    max_tokens: 4096,
+    temperature: ANTHROPIC_TEMPERATURE,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: `${prompt}\n\nReturn raw JSON only, no markdown.` }],
+  });
+
+  const textBlock = message.content.find((block) => block.type === 'text');
+  if (!textBlock || textBlock.type !== 'text') {
+    console.error('Anthropic Raw Response:', JSON.stringify(message, null, 2));
+    throw new Error('Anthropic: No text generated');
+  }
+
+  return textBlock.text;
+}
+
 export async function handleAIRequest(body: AIRequestBody): Promise<AIResponse> {
   const { provider, prompt, systemPrompt, jsonSchema } = body;
 
@@ -142,6 +179,8 @@ export async function handleAIRequest(body: AIRequestBody): Promise<AIResponse> 
 
   if (provider === 'openai') {
     text = await callOpenAI(prompt, systemPrompt);
+  } else if (provider === 'anthropic') {
+    text = await callAnthropic(prompt, systemPrompt);
   } else {
     text = await callGemini(prompt, systemPrompt, jsonSchema);
   }

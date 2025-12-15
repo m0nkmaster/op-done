@@ -349,6 +349,7 @@ export default function AIKitGenerator() {
             >
               <MenuItem value="gemini">Gemini</MenuItem>
               <MenuItem value="openai">OpenAI</MenuItem>
+              <MenuItem value="anthropic">Anthropic</MenuItem>
             </TextField>
             <TextField
               fullWidth

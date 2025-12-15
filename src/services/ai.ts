@@ -1,7 +1,7 @@
 import type { SoundConfig } from '../types/soundConfig';
 import { generateSchemaPrompt, generateBatchSchemaPrompt, coerceSoundConfig } from '../types/soundConfig';
 
-export type AIProvider = 'openai' | 'gemini';
+export type AIProvider = 'openai' | 'gemini' | 'anthropic';
 
 // System prompt for general synthesis (/synthesizer page)
 const SYSTEM_PROMPT = `You are a synthesizer programmer. Return a JSON synthesis config.
@@ -152,13 +152,24 @@ async function generateWithGemini(description: string): Promise<SoundConfig> {
   return processAIResponse(parsed);
 }
 
+async function generateWithAnthropic(description: string): Promise<SoundConfig> {
+  const prompt = `${description}\n\nReturn JSON.`;
+  const text = await callAIProxy('anthropic', prompt, SYSTEM_PROMPT);
+  const parsed = extractJSON(text.trim());
+  return processAIResponse(parsed);
+}
+
 export async function generateSoundConfig(
   description: string,
   provider: AIProvider
 ): Promise<SoundConfig> {
-  return provider === 'openai'
-    ? await generateWithOpenAI(description)
-    : await generateWithGemini(description);
+  if (provider === 'openai') {
+    return await generateWithOpenAI(description);
+  } else if (provider === 'anthropic') {
+    return await generateWithAnthropic(description);
+  } else {
+    return await generateWithGemini(description);
+  }
 }
 
 // Batch generation types
@@ -190,6 +201,21 @@ async function batchGenerateWithGemini(ideas: SoundIdea[]): Promise<SoundConfig[
 
   const prompt = `Generate synthesis configs for these ${ideas.length} drum sounds:\n\n${soundsList}`;
   const text = await callAIProxy('gemini', prompt, BATCH_SYSTEM_PROMPT);
+
+  const parsed = extractJSON(text.trim());
+  const configs = (parsed.configs || []) as Record<string, unknown>[];
+  return configs
+    .filter((c): c is Record<string, unknown> => c !== null && typeof c === 'object')
+    .map(c => processAIResponse(c));
+}
+
+async function batchGenerateWithAnthropic(ideas: SoundIdea[]): Promise<SoundConfig[]> {
+  const soundsList = ideas.map((idea, i) => 
+    `${i + 1}. ${idea.category}: "${idea.name}" - ${idea.description}`
+  ).join('\n');
+
+  const prompt = `Generate synthesis configs for these ${ideas.length} drum sounds:\n\n${soundsList}\n\nReturn JSON: { "configs": [...] }`;
+  const text = await callAIProxy('anthropic', prompt, BATCH_SYSTEM_PROMPT);
 
   const parsed = extractJSON(text.trim());
   const configs = (parsed.configs || []) as Record<string, unknown>[];
@@ -271,9 +297,14 @@ export async function generateBatchSoundConfigs(
   ideas: SoundIdea[],
   provider: AIProvider
 ): Promise<SoundConfig[]> {
-  const configs = provider === 'openai'
-    ? await batchGenerateWithOpenAI(ideas)
-    : await batchGenerateWithGemini(ideas);
+  let configs: SoundConfig[];
+  if (provider === 'openai') {
+    configs = await batchGenerateWithOpenAI(ideas);
+  } else if (provider === 'anthropic') {
+    configs = await batchGenerateWithAnthropic(ideas);
+  } else {
+    configs = await batchGenerateWithGemini(ideas);
+  }
 
   // Apply percussion-specific tweaks
   return configs.map((config, i) => {
@@ -330,9 +361,10 @@ export async function planDrumKit(
   userPrompt: string,
   provider: AIProvider
 ): Promise<KitPlan> {
-  const prompt = provider === 'openai' 
-    ? `${userPrompt}\n\nReturn JSON.`
-    : userPrompt;
+  // OpenAI and Anthropic need explicit JSON instruction, Gemini uses schema
+  const prompt = provider === 'gemini'
+    ? userPrompt
+    : `${userPrompt}\n\nReturn JSON.`;
   
   const text = await callAIProxy(
     provider, 
