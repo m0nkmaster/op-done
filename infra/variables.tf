@@ -32,6 +32,11 @@ variable "openai_api_key" {
   type        = string
   sensitive   = true
   default     = ""
+
+  validation {
+    condition     = length(var.openai_api_key) > 0
+    error_message = "OPENAI_API_KEY required. Run: export TF_VAR_openai_api_key=\"$OPENAI_API_KEY\""
+  }
 }
 
 variable "gemini_api_key" {
@@ -39,17 +44,22 @@ variable "gemini_api_key" {
   type        = string
   sensitive   = true
   default     = ""
+
+  validation {
+    condition     = length(var.gemini_api_key) > 0
+    error_message = "GEMINI_API_KEY required. Run: export TF_VAR_gemini_api_key=\"$GEMINI_API_KEY\""
+  }
 }
 
 variable "openai_model" {
   description = "OpenAI model version"
   type        = string
-  default     = "gpt-4.1"
+  default     = "gpt-4.1-mini"
 }
 
 variable "gemini_model" {
   description = "Google Gemini model version"
   type        = string
-  default     = "gemini-2.5-flash"
+  default     = "gemini-2.0-flash"
 }
 

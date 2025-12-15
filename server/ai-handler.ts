@@ -35,11 +35,11 @@ function getGeminiKey(): string {
 }
 
 function getOpenAIModel(): string {
-  return process.env.OPENAI_MODEL || 'gpt-4.1';
+  return process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 }
 
 function getGeminiModel(): string {
-  return process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  return process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 }
 
 async function callOpenAI(
