@@ -1042,11 +1042,18 @@ export function SynthesizerUI() {
     try {
       const buffer = await synthesizeSound(config);
       const ctx = new AudioContext();
+      // iOS Safari requires explicit resume on user gesture
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.connect(ctx.destination);
       source.start();
-      source.onended = () => setPlaying(false);
+      source.onended = () => {
+        setPlaying(false);
+        ctx.close();
+      };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Synthesis failed');
       setPlaying(false);
