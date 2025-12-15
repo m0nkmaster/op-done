@@ -4,8 +4,8 @@
 *.tfstate.*
 *.tfvars
 !terraform.tfvars.example
+tfplan
 *.tfplan
-.terraform.lock.hcl
 
 # Lambda placeholder
 lambda_placeholder.zip

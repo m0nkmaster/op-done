@@ -167,3 +167,4 @@ User Input → Frontend → OpenAI/Gemini API (keys exposed) → ensureDefaults 
 User Input → Frontend → /api/ai/generate → Server → OpenAI/Gemini API → coerceSoundConfig (Zod) → Config
 ```
 
+
