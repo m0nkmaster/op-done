@@ -38,6 +38,8 @@ resource "aws_lambda_function" "ai_handler" {
     variables = {
       OPENAI_API_KEY = var.openai_api_key
       GEMINI_API_KEY = var.gemini_api_key
+      OPENAI_MODEL   = var.openai_model
+      GEMINI_MODEL   = var.gemini_model
     }
   }
 

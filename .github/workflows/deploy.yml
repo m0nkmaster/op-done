@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_REGION: eu-west-2
-  S3_BUCKET: robmacdonald.com-synthtools
+  S3_BUCKET: robmacdonald-synthtools
   CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
   LAMBDA_FUNCTION_NAME: synth-config-generator
 

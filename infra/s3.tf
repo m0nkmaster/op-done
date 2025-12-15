@@ -1,6 +1,6 @@
 # S3 bucket for static website hosting
 resource "aws_s3_bucket" "website" {
-  bucket = "${var.domain_name}-${var.app_path}"
+  bucket = "robmacdonald-synthtools"
 }
 
 resource "aws_s3_bucket_versioning" "website" {

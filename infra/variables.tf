@@ -41,3 +41,15 @@ variable "gemini_api_key" {
   default     = ""
 }
 
+variable "openai_model" {
+  description = "OpenAI model version"
+  type        = string
+  default     = "gpt-4.1"
+}
+
+variable "gemini_model" {
+  description = "Google Gemini model version"
+  type        = string
+  default     = "gemini-2.5-flash"
+}
+

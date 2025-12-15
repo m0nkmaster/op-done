@@ -39,3 +39,8 @@ private/
 legacy-scripts/
 docs/sample-files/One Shots
 docs/sample-files/Roland TR-808
+
+# Lambda build artifacts
+lambda/dist/
+lambda/function.zip
+lambda/node_modules/

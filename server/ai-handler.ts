@@ -34,6 +34,14 @@ function getGeminiKey(): string {
   return key;
 }
 
+function getOpenAIModel(): string {
+  return process.env.OPENAI_MODEL || 'gpt-4.1';
+}
+
+function getGeminiModel(): string {
+  return process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+}
+
 async function callOpenAI(
   prompt: string,
   systemPrompt: string
@@ -47,7 +55,7 @@ async function callOpenAI(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-5.2-pro',
+      model: getOpenAIModel(),
       instructions: systemPrompt,
       input: prompt,
       text: {
@@ -105,7 +113,7 @@ async function callGemini(
   }
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: getGeminiModel(),
     contents: prompt,
     config,
   });
