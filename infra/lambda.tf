@@ -48,6 +48,28 @@ resource "aws_lambda_function" "ai_handler" {
   }
 }
 
+# Lambda Function URL (replaces API Gateway)
+resource "aws_lambda_function_url" "ai_handler" {
+  function_name      = aws_lambda_function.ai_handler.function_name
+  authorization_type = "NONE"
+}
+
+# Permission for Function URL public access (both permissions required since Oct 2025)
+resource "aws_lambda_permission" "function_url_invoke_url" {
+  statement_id           = "FunctionURLAllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.ai_handler.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
+resource "aws_lambda_permission" "function_url_invoke_function" {
+  statement_id  = "FunctionURLInvokeFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.ai_handler.function_name
+  principal     = "*"
+}
+
 # Placeholder zip for initial deployment
 data "archive_file" "lambda_placeholder" {
   type        = "zip"
@@ -57,50 +79,6 @@ data "archive_file" "lambda_placeholder" {
     content  = "exports.handler = async () => ({ statusCode: 200, body: 'Placeholder' });"
     filename = "index.js"
   }
-}
-
-# API Gateway HTTP API
-resource "aws_apigatewayv2_api" "ai_handler" {
-  name          = "synth-config-api"
-  protocol_type = "HTTP"
-
-  cors_configuration {
-    allow_origins = ["https://${var.domain_name}"]
-    allow_methods = ["GET", "POST", "OPTIONS"]
-    allow_headers = ["*"]
-    max_age       = 86400
-  }
-}
-
-# API Gateway integration with Lambda
-resource "aws_apigatewayv2_integration" "lambda" {
-  api_id                 = aws_apigatewayv2_api.ai_handler.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.ai_handler.invoke_arn
-  payload_format_version = "2.0"
-}
-
-# Default route (catch-all)
-resource "aws_apigatewayv2_route" "default" {
-  api_id    = aws_apigatewayv2_api.ai_handler.id
-  route_key = "$default"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
-# Auto-deploy stage
-resource "aws_apigatewayv2_stage" "default" {
-  api_id      = aws_apigatewayv2_api.ai_handler.id
-  name        = "$default"
-  auto_deploy = true
-}
-
-# Permission for API Gateway to invoke Lambda
-resource "aws_lambda_permission" "apigateway" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.ai_handler.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.ai_handler.execution_arn}/*/*"
 }
 
 # CloudWatch log group

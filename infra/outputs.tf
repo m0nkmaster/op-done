@@ -23,8 +23,8 @@ output "lambda_function_name" {
   value       = aws_lambda_function.ai_handler.function_name
 }
 
-output "api_gateway_url" {
-  description = "API Gateway URL"
-  value       = aws_apigatewayv2_api.ai_handler.api_endpoint
+output "lambda_function_url" {
+  description = "Lambda Function URL"
+  value       = aws_lambda_function_url.ai_handler.function_url
 }
 

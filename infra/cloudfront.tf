@@ -62,10 +62,10 @@ resource "aws_cloudfront_distribution" "website" {
     # No origin_path - files are already under /synthtools/ in S3
   }
 
-  # API Gateway origin for API
+  # Lambda Function URL origin for API
   origin {
-    domain_name = "${aws_apigatewayv2_api.ai_handler.id}.execute-api.${var.aws_region}.amazonaws.com"
-    origin_id   = "APIGatewayOrigin"
+    domain_name = replace(replace(aws_lambda_function_url.ai_handler.function_url, "https://", ""), "/", "")
+    origin_id   = "LambdaFunctionURL"
 
     custom_origin_config {
       http_port              = 80
@@ -118,12 +118,12 @@ resource "aws_cloudfront_distribution" "website" {
     max_ttl     = 31536000
   }
 
-  # API routes - proxy to API Gateway
+  # API routes - proxy to Lambda Function URL
   ordered_cache_behavior {
     path_pattern           = "/api/*"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "APIGatewayOrigin"
+    target_origin_id       = "LambdaFunctionURL"
     viewer_protocol_policy = "https-only"
     compress               = true
 
