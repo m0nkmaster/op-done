@@ -895,6 +895,7 @@ export function SynthesizerUI() {
   const [validationResult, setValidationResult] = useState<ValidationResult>({ valid: true, errors: [] });
   const [showJSONEditor, setShowJSONEditor] = useState(false);
   const [showMetadata, setShowMetadata] = useState(false);
+  const [showSynthEngine, setShowSynthEngine] = useState(true);
   const [selectedLayer, setSelectedLayer] = useState(0);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const isUpdatingFromUI = useRef(false);
@@ -1092,7 +1093,10 @@ export function SynthesizerUI() {
             padding: isMobile ? '12px' : '10px 16px',
             borderBottom: `1px solid ${TE.border}`,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div 
+              onClick={() => setShowSynthEngine(!showSynthEngine)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+            >
               <div style={{
                 width: isMobile ? 36 : 28,
                 height: isMobile ? 36 : 28,
@@ -1169,6 +1173,7 @@ export function SynthesizerUI() {
           </div>
           
           {/* AI PROMPT */}
+          {showSynthEngine && (
           <div style={{ 
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
@@ -1236,9 +1241,10 @@ export function SynthesizerUI() {
               {generating ? 'GENERATING...' : '✨ GENERATE'}
             </button>
           </div>
+          )}
 
           {/* MIDI PANEL - only show when devices available */}
-          {midi.enabled && midi.devices.length > 0 && (
+          {showSynthEngine && midi.enabled && midi.devices.length > 0 && (
             <div style={{
               display: 'flex',
               flexDirection: isMobile ? 'column' : 'row',
