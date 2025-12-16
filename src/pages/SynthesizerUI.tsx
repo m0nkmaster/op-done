@@ -953,7 +953,7 @@ export function SynthesizerUI() {
   const [validationResult, setValidationResult] = useState<ValidationResult>({ valid: true, errors: [] });
   const [showJSONEditor, setShowJSONEditor] = useState(false);
   const [showMetadata, setShowMetadata] = useState(false);
-  const [showSynthEngine, setShowSynthEngine] = useState(true);
+  const [showSynthEngine, setShowSynthEngine] = useState(false);
   const [selectedLayer, setSelectedLayer] = useState(0);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const isUpdatingFromUI = useRef(false);
@@ -1169,7 +1169,7 @@ export function SynthesizerUI() {
               }}>SE</div>
               <div>
                 <div style={{ fontSize: isMobile ? 12 : 10, fontWeight: 700, color: TE.black, letterSpacing: 1 }}>SYNTH ENGINE</div>
-                <div style={{ fontSize: isMobile ? 10 : 8, color: TE.grey }}>make a sound or ask AI</div>
+                <div style={{ fontSize: isMobile ? 10 : 8, color: TE.grey }}>make a sound or <span style={{ textDecoration: 'underline' }}>ask AI</span></div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
@@ -1302,8 +1302,8 @@ export function SynthesizerUI() {
           </div>
           )}
 
-          {/* MIDI PANEL - only show when devices available */}
-          {showSynthEngine && midi.enabled && midi.devices.length > 0 && (
+          {/* MIDI PANEL - show when devices connected (independent of SE panel) */}
+          {midi.enabled && midi.devices.length > 0 && (
             <div style={{
               display: 'flex',
               flexDirection: isMobile ? 'column' : 'row',
