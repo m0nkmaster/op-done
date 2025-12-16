@@ -26,6 +26,9 @@ Browser-based OP-Z drum pack builder. Converts audio files to OP-Z AIFF format w
 - Renew, don't append
 - Keep concise
 
+### Git
+- Commits: one line, what + why (e.g. "Fix KS damping range to produce usable sustain")
+
 ## Workflow
 
 **Before work:**
