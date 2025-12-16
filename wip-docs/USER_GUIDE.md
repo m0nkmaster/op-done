@@ -1,6 +1,6 @@
-# OP Done User Guide
+# Synth Tools User Guide
 
-Complete guide to using OP Done for creating and analyzing OP-Z drum sample packs.
+Complete guide to using Synth Tools for creating and analyzing OP-Z drum sample packs.
 
 ---
 
@@ -17,9 +17,9 @@ Complete guide to using OP Done for creating and analyzing OP-Z drum sample pack
 
 ## Getting Started
 
-### What is OP Done?
+### What is Synth Tools?
 
-OP Done is a browser-based tool for creating custom drum sample packs for the Teenage Engineering OP-Z synthesizer. It converts your audio files into the specific AIFF format required by the OP-Z, complete with proper metadata for slice markers.
+Synth Tools is a browser-based tool for creating custom drum sample packs for the Teenage Engineering OP-Z synthesizer. It converts your audio files into the specific AIFF format required by the OP-Z, complete with proper metadata for slice markers.
 
 ### System Requirements
 
@@ -29,7 +29,7 @@ OP Done is a browser-based tool for creating custom drum sample packs for the Te
 
 ### Quick Start
 
-1. Open OP Done in your browser
+1. Open Synth Tools in your browser
 2. Navigate to **Drum Kit Creator**
 3. Drag and drop up to 24 audio files
 4. Adjust settings if needed
@@ -160,7 +160,7 @@ Click **Export** button to:
 
 #### Audio Classification
 
-OP Done automatically analyzes each file and detects:
+Synth Tools automatically analyzes each file and detects:
 - **Drum hits** - Kicks, snares, hats, cymbals, percussion
 - **Melodic samples** - Pitched instruments
 - **Unknown** - Ambiguous or noisy samples
@@ -436,12 +436,12 @@ If pack doesn't appear:
 ### General
 
 **Q: Do I need to install anything?**  
-A: No, OP Done runs entirely in your browser. No installation required.
+A: No, Synth Tools runs entirely in your browser. No installation required.
 
 **Q: Is my audio data sent to a server?**  
 A: No, all processing happens locally in your browser. Files never leave your computer (except for Sound Creation feature which uses OpenAI API).
 
-**Q: Can I use OP Done offline?**  
+**Q: Can I use Synth Tools offline?**  
 A: Yes, after first load. The app caches for offline use (except Sound Creation).
 
 **Q: What browsers are supported?**  

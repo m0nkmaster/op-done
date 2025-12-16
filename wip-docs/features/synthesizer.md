@@ -1,4 +1,4 @@
-# OP Done Synthesizer
+# Synth Tools Synthesizer
 
 ## Overview
 

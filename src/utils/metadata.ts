@@ -4,7 +4,7 @@ import { MAX_SLICES, OPZ_DEFAULTS } from '../constants';
 
 /** Creates default drum metadata */
 export const createDefaultMetadata = (): DrumMetadata => ({
-  name: 'op-done',
+  name: 'synth-tools',
   octave: 0,
   drumVersion: 3,
   pitch: new Array(MAX_SLICES).fill(OPZ_DEFAULTS.PITCH),

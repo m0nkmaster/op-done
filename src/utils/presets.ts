@@ -18,7 +18,7 @@ export interface PresetStorage {
   defaultPresetId: string;
 }
 
-const STORAGE_KEY = 'opDone.synth.presets';
+const STORAGE_KEY = 'synthTools.synth.presets';
 
 /**
  * Storage error types

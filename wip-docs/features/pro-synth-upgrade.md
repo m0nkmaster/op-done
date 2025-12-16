@@ -2,7 +2,7 @@
 
 ## Overview
 
-Transform OP-Done's synthesizer into a professional-grade sound design tool for **drums, melodic instruments, bass, pads, leads, and sound effects** - capable of producing sounds used by professional musicians and producers.
+Transform Synth Tools' synthesizer into a professional-grade sound design tool for **drums, melodic instruments, bass, pads, leads, and sound effects** - capable of producing sounds used by professional musicians and producers.
 
 **Current Capability:** Already works for melodic synthesis! The architecture is sound-agnostic. This upgrade adds depth and expressiveness.
 
@@ -715,7 +715,7 @@ layer.filter = undefined
 
 ## Conclusion
 
-This upgrade transforms OP-Done from a basic drum synth into a professional sound design tool. The phased approach ensures steady progress while maintaining code quality and backward compatibility.
+This upgrade transforms Synth Tools from a basic drum synth into a professional sound design tool. The phased approach ensures steady progress while maintaining code quality and backward compatibility.
 
 **Estimated Timeline:** 6 weeks
 **Estimated Effort:** ~120 hours

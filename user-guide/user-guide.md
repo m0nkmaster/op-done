@@ -1,6 +1,6 @@
-# OP Done User Guide
+# Synth Tools User Guide
 
-Complete guide to all OP Done features.
+Complete guide to all Synth Tools features.
 
 ---
 

@@ -1,10 +1,10 @@
 # Developer Documentation
 
-Technical documentation for OP Done development.
+Technical documentation for Synth Tools development.
 
 ## Project Overview
 
-OP Done is a browser-based synthesizer and sample pack toolkit:
+Synth Tools is a browser-based synthesizer and sample pack toolkit:
 - **Synthesizer** — Full-featured Web Audio synth with MIDI and AI generation
 - **AI Kit Generator** — Generate complete 24-sound kits from text prompts
 - **Drum Kit Creator** — Build OP-Z packs from audio samples

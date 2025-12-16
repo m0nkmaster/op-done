@@ -1,4 +1,4 @@
-# OP Done
+# Synth Tools
 
 Browser-based synthesizer and sample pack toolkit. Create sounds with AI, build drum kits, and export to OP-Z—all client-side.
 

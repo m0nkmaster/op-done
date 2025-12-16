@@ -1,8 +1,8 @@
-# OP Done — Technical Architecture
+# Synth Tools — Technical Architecture
 
 ## Overview
 
-OP Done is a browser-based application for creating OP-Z drum sample packs. The architecture prioritizes client-side processing, deterministic output, and framework-agnostic core modules for future Electron packaging.
+Synth Tools is a browser-based application for creating OP-Z drum sample packs. The architecture prioritizes client-side processing, deterministic output, and framework-agnostic core modules for future Electron packaging.
 
 ## Stack
 

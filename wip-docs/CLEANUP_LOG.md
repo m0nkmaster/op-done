@@ -1,4 +1,4 @@
-# OP Done Cleanup Log
+# Synth Tools Cleanup Log
 
 **Date:** 2025-01-13
 
@@ -50,7 +50,7 @@ C. **Fix it** (requires OpenAI API key + testing)
 
 ### ⏳ 5. Consolidate Feature Docs
 **Keep:**
-- `docs/features/op-done.md` - Main feature spec
+- `docs/features/synth-tools.md` - Main feature spec
 - `docs/features/implementation.md` - Implementation notes
 
 **Archive/Remove:**

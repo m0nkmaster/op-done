@@ -77,7 +77,7 @@ describe('Preset Storage Utilities', () => {
       const config = DEFAULT_SOUND_CONFIG;
       savePreset('Test', config);
 
-      const stored = localStorageMock.getItem('opDone.synth.presets');
+      const stored = localStorageMock.getItem('synthTools.synth.presets');
       expect(stored).toBeTruthy();
 
       const parsed = JSON.parse(stored!);
@@ -231,9 +231,9 @@ describe('Preset Storage Utilities', () => {
       setDefaultPreset(saved.id);
 
       // Manually delete from storage without using deletePreset
-      const storage = JSON.parse(localStorageMock.getItem('opDone.synth.presets')!);
+      const storage = JSON.parse(localStorageMock.getItem('synthTools.synth.presets')!);
       storage.presets = [];
-      localStorageMock.setItem('opDone.synth.presets', JSON.stringify(storage));
+      localStorageMock.setItem('synthTools.synth.presets', JSON.stringify(storage));
 
       const defaultPreset = getDefaultPreset();
       expect(defaultPreset).toBeNull();
@@ -271,7 +271,7 @@ describe('Preset Storage Utilities', () => {
       // Mock setItem to throw quota exceeded error only for the storage key
       const originalSetItem = localStorageMock.setItem;
       localStorageMock.setItem = (key: string, value: string) => {
-        if (key === 'opDone.synth.presets') {
+        if (key === 'synthTools.synth.presets') {
           const error = new Error('QuotaExceededError');
           error.name = 'QuotaExceededError';
           throw error;
@@ -289,7 +289,7 @@ describe('Preset Storage Utilities', () => {
     test('should handle corrupted storage data', () => {
       // Set invalid JSON in storage using the original setItem
       const originalSetItem = localStorageMock.setItem;
-      originalSetItem('opDone.synth.presets', 'invalid json');
+      originalSetItem('synthTools.synth.presets', 'invalid json');
 
       expect(() => listPresets()).toThrow(PresetStorageError);
       expect(() => listPresets()).toThrow('Failed to read');

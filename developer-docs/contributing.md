@@ -14,7 +14,7 @@ Development workflow, testing, and code style.
 
 ```bash
 git clone <repo-url>
-cd op-done
+cd synth-tools
 bun install
 bun dev
 ```

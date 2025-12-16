@@ -68,7 +68,7 @@ Samples cannot be cross-loaded (drums on synth tracks or vice versa).
 
 **Recommended Workflow:**
 1. Prepare 24 or fewer audio files (WAV, AIFF, MP3, M4A, FLAC)
-2. Use OP Done or similar tool to:
+2. Use Synth Tools or similar tool to:
    - Convert to mono 44.1 kHz 16-bit AIFF
    - Normalize loudness (LUFS recommended)
    - Trim leading silence
@@ -308,7 +308,7 @@ clamped_value = min(scaled_frame, 0x7ffffffe)
 - Original guide: Dec 2018, OP-Z firmware 1.1.12
 - OP-1 Drum Utility: macOS app for creating drum packs
 - `teoperator`: legacy CLI tool for OP-1/OP-Z drum packs
-- OP Done: modern browser-based drum pack builder
+- Synth Tools: modern browser-based drum pack builder
 
 ---
 

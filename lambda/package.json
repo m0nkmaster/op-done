@@ -1,5 +1,5 @@
 {
-  "name": "op-done-lambda",
+  "name": "synth-tools-lambda",
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {

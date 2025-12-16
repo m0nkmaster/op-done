@@ -1,4 +1,4 @@
-/** Centralized configuration for OP Done */
+/** Centralized configuration for Synth Tools */
 
 // Audio Processing
 export const AUDIO = {

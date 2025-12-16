@@ -1,4 +1,4 @@
-# OP Done Features Wishlist
+# Synth Tools Features Wishlist
 
 ## Current Features (Implemented)
 - ✅ 24-slice drum pack creation
@@ -224,7 +224,7 @@ Based on the legacy teoperator tool for OP-1/OP-Z:
 - [ ] Native notifications
 - [ ] Drag-and-drop from Finder/Explorer
 - [ ] Context menu integration
-- [ ] File associations (.opdone project files)
+- [ ] File associations (.synthtools project files)
 
 ## Notes
 - Features marked with ✅ are implemented

@@ -1,7 +1,7 @@
 # Origin Access Control for S3
 resource "aws_cloudfront_origin_access_control" "website" {
-  name                              = "op-done-oac"
-  description                       = "OAC for op-done S3 bucket"
+  name                              = "synth-tools-oac"
+  description                       = "OAC for synth-tools S3 bucket"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -9,7 +9,7 @@ resource "aws_cloudfront_origin_access_control" "website" {
 
 # Response headers policy for ffmpeg.wasm (COOP/COEP)
 resource "aws_cloudfront_response_headers_policy" "security_headers" {
-  name = "op-done-security-headers"
+  name = "synth-tools-security-headers"
 
   custom_headers_config {
     items {

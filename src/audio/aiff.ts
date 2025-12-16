@@ -117,7 +117,7 @@ function buildDrumMetadataChunk(
   const payloadObj: Record<string, unknown> = {
     drum_version: drumVersion,
     type: 'drum',
-    name: metadata.name || 'op-done', // TE utility requires non-empty name
+    name: metadata.name || 'synth-tools', // TE utility requires non-empty name
     start: positionsStart,
     end: positionsEnd,
     octave: metadata.octave,

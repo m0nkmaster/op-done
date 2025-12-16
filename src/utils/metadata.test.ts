@@ -4,7 +4,7 @@ import { createDefaultMetadata, updateMetadataArray, ensureMetadataLength } from
 describe('createDefaultMetadata', () => {
   it('creates metadata with correct defaults', () => {
     const meta = createDefaultMetadata();
-    expect(meta.name).toBe('op-done');
+    expect(meta.name).toBe('synth-tools');
     expect(meta.octave).toBe(0);
     expect(meta.drumVersion).toBe(3);
     expect(meta.pitch).toHaveLength(24);

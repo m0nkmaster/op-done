@@ -2,7 +2,7 @@
 
 ## Overview
 
-OP-Done's synthesizer has been upgraded from basic drum synthesis to a **professional-grade sound design tool** capable of creating drums, bass, leads, pads, and sound effects used by professional musicians.
+Synth Tools' synthesizer has been upgraded from basic drum synthesis to a **professional-grade sound design tool** capable of creating drums, bass, leads, pads, and sound effects used by professional musicians.
 
 **Status:** Phase 1-3 Complete (Core Synthesis + Modulation)  
 **Test Coverage:** 20+ tests covering all features  

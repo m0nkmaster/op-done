@@ -1,11 +1,11 @@
-# OP Done Codebase Audit
+# Synth Tools Codebase Audit
 
 **Date:** 2025-01-13  
 **Status:** Pre-cleanup
 
 ## Executive Summary
 
-This audit identifies unused code, legacy patterns, missing tests, and documentation gaps across the OP Done codebase. The app has evolved through multiple implementation approaches, leaving some vestigial code and inconsistencies.
+This audit identifies unused code, legacy patterns, missing tests, and documentation gaps across the Synth Tools codebase. The app has evolved through multiple implementation approaches, leaving some vestigial code and inconsistencies.
 
 ---
 

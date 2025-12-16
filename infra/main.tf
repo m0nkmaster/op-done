@@ -10,7 +10,7 @@ terraform {
 
   # Uncomment and configure after initial apply to enable remote state
   # backend "s3" {
-  #   bucket = "op-done-terraform-state"
+  #   bucket = "synth-tools-terraform-state"
   #   key    = "synthtools/terraform.tfstate"
   #   region = "us-east-1"
   # }
@@ -22,7 +22,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "op-done"
+      Project     = "synth-tools"
       Environment = "production"
       ManagedBy   = "terraform"
     }
@@ -36,7 +36,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "op-done"
+      Project     = "synth-tools"
       Environment = "production"
       ManagedBy   = "terraform"
     }

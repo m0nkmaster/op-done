@@ -106,7 +106,7 @@ Create a single, unified drum pack creation experience:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  OP Done Drum Pack Creator                                  │
+│  Synth Tools Drum Pack Creator                              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  Pack Name: [My Custom Kit_________]                        │

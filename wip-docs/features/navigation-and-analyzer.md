@@ -1,7 +1,7 @@
 # Navigation and Sample Analyzer
 
 ## Overview
-Add horizontal navigation to support multiple tools within OP Done, starting with the existing drum kit creator and a new sample analyzer for visualizing OP-Z annotated files.
+Add horizontal navigation to support multiple tools within Synth Tools, starting with the existing drum kit creator and a new sample analyzer for visualizing OP-Z annotated files.
 
 ## Features
 

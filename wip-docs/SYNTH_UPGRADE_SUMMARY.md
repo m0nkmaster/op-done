@@ -2,7 +2,7 @@
 
 ## What Was Built
 
-Transformed OP-Done's basic synthesizer into a **professional-grade sound design tool** for drums, bass, leads, pads, and effects.
+Transformed Synth Tools' basic synthesizer into a **professional-grade sound design tool** for drums, bass, leads, pads, and effects.
 
 ## Status: ✅ COMPLETE
 

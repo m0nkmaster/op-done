@@ -1,7 +1,7 @@
 {
     "drum_version": 2,
     "type": "drum",
-    "name": "op-done",
+    "name": "synth-tools",
     "start": [
         0,
         9011200,

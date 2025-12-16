@@ -22,7 +22,7 @@
 {
   "drum_version": 3,
   "type": "drum",
-  "name": "op-done",
+  "name": "synth-tools",
   "octave": 0,
   "pitch": [...],
   "start": [...],

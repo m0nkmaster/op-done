@@ -1,4 +1,4 @@
-# OP Done — Feature Requirements
+# Synth Tools — Feature Requirements
 
 Utility app for preparing content for Teenage Engineering devices (starting with OP-Z). This doc tracks feature requirements and implementation status.
 
@@ -175,4 +175,4 @@ Goal: convert a single audio source to an OP-Z synth sample slot (6s limit).
 
 ---
 
-Repo: git@github.com:m0nkmaster/op-done.git
+Repo: git@github.com:m0nkmaster/synth-tools.git
