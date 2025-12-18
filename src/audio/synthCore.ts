@@ -198,7 +198,8 @@ export function createFMLayer(
     const safeAttack = Math.max(0.001, env.attack);
     const safeDecay = Math.max(0.001, env.decay);
     const safeRelease = Math.max(0.001, env.release);
-    const peakGain = safeModIndex * operatorFreq;
+    // Ensure peakGain is never 0 (exponentialRamp can't target 0)
+    const peakGain = Math.max(SILENCE, safeModIndex * operatorFreq);
     const sustainGain = Math.max(SILENCE, env.sustain * peakGain);
     const releaseStart = Math.max(safeAttack + safeDecay + 0.01, duration - safeRelease);
     
