@@ -47,9 +47,27 @@ Supports multiple simultaneous sound sources:
 - Pink noise: 1/f filtered (Voss-McCartney algorithm)
 
 **FM Layer**
-- Carrier + modulator oscillators
-- Modulation index control
-- Classic FM synthesis
+- Frequency ratio relative to base pitch (0.5-16x)
+- Waveform selection (sine, square, sawtooth, triangle)
+- Modulation index control (depth: 0-100)
+- Self-feedback for metallic tones (0-1)
+- Inter-layer routing: FM layers can modulate other FM layers
+- Per-operator envelope for evolving timbres
+
+### FM Routing
+
+FM layers can be chained to create complex timbres:
+
+```
+[Modulator Layer] --modulatesLayer--> [Carrier Layer] --> Output
+       ↑
+    feedback
+```
+
+- Set `modulatesLayer` to target another FM layer's index
+- Layers without `modulatesLayer` output directly to the mixer
+- Feedback (0-1) adds self-modulation for metallic/harsh tones
+- Operator envelope shapes modulation depth over time (critical for FM timbres)
 
 ## Signal Flow
 

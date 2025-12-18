@@ -15,6 +15,8 @@ import {
   applyReleaseEnvelope,
   applyFilterEnvelope,
   applyPitchEnvelopeRealtime,
+  isFMLayerResult,
+  type FMLayerResult,
 } from './synthCore';
 
 // Safe value helper - returns fallback for non-finite values
@@ -160,22 +162,39 @@ export class RealtimeSynth {
     // Create layer mix node
     const layerMix = ctx.createGain();
 
-    for (const layer of this.config.synthesis.layers) {
+    // === FM ROUTING: Two-pass processing ===
+    // Pass 1: Create all layers, collecting FM layer results for routing
+    interface LayerInfo {
+      layerIndex: number;
+      layer: SoundConfig['synthesis']['layers'][0];
+      layerGain: GainNode;
+      result: ReturnType<typeof createLayerSources>;
+    }
+    const layerInfos: LayerInfo[] = [];
+    const fmLayerResults: Map<number, FMLayerResult> = new Map();
+
+    for (let i = 0; i < this.config.synthesis.layers.length; i++) {
+      const layer = this.config.synthesis.layers[i];
       const layerGain = ctx.createGain();
 
       // Use shared core for layer creation - always use MIDI frequency
-      const { sources, output } = createLayerSources(
+      const result = createLayerSources(
         ctx,
         layer,
         frequency, // Use MIDI note frequency, not config frequency
         startTime
       );
-      allSources.push(...sources);
+      allSources.push(...result.sources);
+
+      // Track FM layers for routing
+      if (isFMLayerResult(result)) {
+        fmLayerResults.set(i, result);
+      }
 
       // Apply pitch envelope to oscillator sources
       if (layer.oscillator?.pitchEnvelope) {
         const pitchEnv = layer.oscillator.pitchEnvelope;
-        for (const source of sources) {
+        for (const source of result.sources) {
           if (source instanceof OscillatorNode) {
             applyPitchEnvelopeRealtime(source.frequency, frequency, pitchEnv, startTime);
           }
@@ -183,10 +202,10 @@ export class RealtimeSynth {
       }
 
       // Layer filter with envelope (matching static synth)
-      let layerOutput: AudioNode = output;
+      let layerOutput: AudioNode = result.output;
       if (layer.filter) {
         const lf = createFilter(ctx, layer.filter);
-        output.connect(lf);
+        result.output.connect(lf);
         layerOutput = lf;
         
         // Apply filter envelope if defined
@@ -220,7 +239,30 @@ export class RealtimeSynth {
       }
 
       layerOutput.connect(layerGain);
-      layerGain.connect(layerMix);
+      layerInfos.push({ layerIndex: i, layer, layerGain, result });
+    }
+
+    // Pass 2: Wire up FM modulation routing
+    for (const { layerIndex, layer, layerGain } of layerInfos) {
+      const fmResult = fmLayerResults.get(layerIndex);
+      
+      if (fmResult && layer.fm?.modulatesLayer !== undefined) {
+        // This FM layer modulates another FM layer
+        const targetIndex = layer.fm.modulatesLayer;
+        const targetFM = fmLayerResults.get(targetIndex);
+        
+        if (targetFM) {
+          // Route modulation output to target's carrier frequency
+          fmResult.modulationOutput.connect(targetFM.carrierFrequencyParam);
+          // Don't connect to mixer (this is a modulator, not an audio output)
+        } else {
+          // Target not found or not an FM layer - fall back to audio output
+          layerGain.connect(layerMix);
+        }
+      } else {
+        // Normal audio output to mixer
+        layerGain.connect(layerMix);
+      }
     }
 
     // Global filter with envelope (matching static synth)

@@ -538,6 +538,7 @@ interface LayerPanelProps {
   onUpdate: (l: LayerType) => void;
   onRemove: () => void;
   canRemove: boolean;
+  allLayers: LayerType[];  // For FM routing - need to know other FM layers
   isMobile?: boolean;
   isTablet?: boolean;
   knobSize?: 'small' | 'medium' | 'large';
@@ -546,7 +547,7 @@ interface LayerPanelProps {
   TE: ReturnType<typeof createThemeTokens>;
 }
 
-function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canRemove, isMobile = false, isTablet = false, knobSize = 'small', btnSize = 'small', toggleSize = 'small', TE }: LayerPanelProps) {
+function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canRemove, allLayers, isMobile = false, isTablet = false, knobSize = 'small', btnSize = 'small', toggleSize = 'small', TE }: LayerPanelProps) {
   const LAYER_CFG: Record<string, { icon: string; color: string; label: string }> = {
     oscillator: { icon: '◐', color: TE.orange, label: 'OSC' },
     noise: { icon: '▒', color: TE.pink, label: 'NSE' },
@@ -693,14 +694,58 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
             </div>
           )}
 
-          {layer.type === 'fm' && layer.fm && (
+          {layer.type === 'fm' && layer.fm && (() => {
+            // Get other FM layers for routing dropdown
+            const otherFMLayers = allLayers
+              .map((l, i) => ({ layer: l, index: i }))
+              .filter(({ layer: l, index: i }) => l.type === 'fm' && i !== index);
+            // FM config after schema migration always has these fields
+            const fmConfig = layer.fm as { ratio: number; waveform: 'sine' | 'square' | 'sawtooth' | 'triangle'; modulationIndex: number; feedback: number; modulatesLayer?: number; envelope?: { attack: number; decay: number; sustain: number; release: number } };
+            const updateFM = (patch: Partial<typeof fmConfig>) => onUpdate({ ...layer, fm: { ...fmConfig, ...patch } as typeof fmConfig });
+            
+            return (
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 8 }}>
-              <Module label="FM SYNTHESIS" color={cfg.color} isMobile={isMobile} TE={TE}>
-                <MiniKnob value={layer.fm.carrier} min={20} max={20000} onChange={v => onUpdate({ ...layer, fm: { ...layer.fm!, carrier: v } })} label="CAR" color={cfg.color} logarithmic size={knobSize} TE={TE} />
-                <MiniKnob value={layer.fm.modulator} min={20} max={20000} onChange={v => onUpdate({ ...layer, fm: { ...layer.fm!, modulator: v } })} label="MOD" color={cfg.color} logarithmic size={knobSize} TE={TE} />
-                <MiniKnob value={layer.fm.modulationIndex} min={0} max={100} onChange={v => onUpdate({ ...layer, fm: { ...layer.fm!, modulationIndex: v } })} label="IDX" color={cfg.color} size={knobSize} TE={TE} />
+              <Module label="FM OPERATOR" color={cfg.color} isMobile={isMobile} TE={TE}>
+                <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap', marginBottom: 4 }}>
+                  {['sine', 'square', 'sawtooth', 'triangle'].map(w => (
+                    <Btn key={w} active={(fmConfig.waveform || 'sine') === w} onClick={() => updateFM({ waveform: w as any })} color={cfg.color} small size={btnSize} TE={TE}>{w.slice(0, 3).toUpperCase()}</Btn>
+                  ))}
+                </div>
+                <MiniKnob value={fmConfig.ratio ?? 1} min={0.5} max={16} onChange={v => updateFM({ ratio: v })} label="RATIO" color={cfg.color} size={knobSize} TE={TE} />
+                <MiniKnob value={fmConfig.modulationIndex} min={0} max={100} onChange={v => updateFM({ modulationIndex: v })} label="INDEX" color={cfg.color} size={knobSize} TE={TE} />
+                <MiniKnob value={fmConfig.feedback ?? 0} min={0} max={1} onChange={v => updateFM({ feedback: v })} label="FB" color={cfg.color} size={knobSize} TE={TE} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <span style={{ fontSize: isMobile ? 9 : 7, color: TE.grey, fontWeight: 700 }}>→</span>
+                  <select
+                    value={fmConfig.modulatesLayer === undefined ? 'output' : String(fmConfig.modulatesLayer)}
+                    onChange={(e) => updateFM({ modulatesLayer: e.target.value === 'output' ? undefined : Number(e.target.value) })}
+                    style={{
+                      background: TE.panel,
+                      border: `1px solid ${TE.border}`,
+                      borderRadius: 3,
+                      color: TE.light,
+                      fontSize: isMobile ? 11 : 9,
+                      padding: '4px 6px',
+                      cursor: 'pointer',
+                      flex: 1,
+                    }}
+                  >
+                    <option value="output">OUTPUT</option>
+                    {otherFMLayers.map(({ index: i }) => (
+                      <option key={i} value={String(i)}>Layer {i + 1} (FM)</option>
+                    ))}
+                  </select>
+                </div>
               </Module>
-              <Module label="ENVELOPE" color={TE.green} on={!!layer.envelope} onToggle={() => onUpdate({ ...layer, envelope: layer.envelope ? undefined : { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.3 } })} isMobile={isMobile} TE={TE}>
+              <Module label="OP ENVELOPE" color={TE.yellow} on={!!fmConfig.envelope} onToggle={() => updateFM({ envelope: fmConfig.envelope ? undefined : { attack: 0.01, decay: 0.2, sustain: 0.5, release: 0.3 } })} isMobile={isMobile} TE={TE}>
+                {fmConfig.envelope && <>
+                  <MiniKnob value={fmConfig.envelope.attack * 1000} min={1} max={2000} onChange={v => updateFM({ envelope: { ...fmConfig.envelope!, attack: v / 1000 } })} label="A" color={TE.yellow} size={knobSize} TE={TE} />
+                  <MiniKnob value={fmConfig.envelope.decay * 1000} min={1} max={2000} onChange={v => updateFM({ envelope: { ...fmConfig.envelope!, decay: v / 1000 } })} label="D" color={TE.yellow} size={knobSize} TE={TE} />
+                  <MiniKnob value={fmConfig.envelope.sustain} min={0} max={1} onChange={v => updateFM({ envelope: { ...fmConfig.envelope!, sustain: v } })} label="S" color={TE.yellow} size={knobSize} TE={TE} />
+                  <MiniKnob value={fmConfig.envelope.release * 1000} min={1} max={5000} onChange={v => updateFM({ envelope: { ...fmConfig.envelope!, release: v / 1000 } })} label="R" color={TE.yellow} size={knobSize} TE={TE} />
+                </>}
+              </Module>
+              <Module label="LAYER ENV" color={TE.green} on={!!layer.envelope} onToggle={() => onUpdate({ ...layer, envelope: layer.envelope ? undefined : { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.3 } })} isMobile={isMobile} TE={TE}>
                 {layer.envelope && <>
                   <MiniKnob value={layer.envelope.attack * 1000} min={1} max={2000} onChange={v => onUpdate({ ...layer, envelope: { ...layer.envelope!, attack: v / 1000 } })} label="A" color={TE.green} size={knobSize} TE={TE} />
                   <MiniKnob value={layer.envelope.decay * 1000} min={1} max={2000} onChange={v => onUpdate({ ...layer, envelope: { ...layer.envelope!, decay: v / 1000 } })} label="D" color={TE.green} size={knobSize} TE={TE} />
@@ -742,7 +787,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
                 </>}
               </Module>
             </div>
-          )}
+          );
+          })()}
 
           {layer.type === 'karplus-strong' && layer.karplus && (
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 8 }}>
@@ -1059,7 +1105,7 @@ export function SynthesizerUI() {
     let newLayer: LayerType;
     if (type === 'oscillator') newLayer = { ...base, type, oscillator: { waveform: 'sine', frequency: 440, detune: 0 } };
     else if (type === 'noise') newLayer = { ...base, type, noise: { type: 'white' } };
-    else if (type === 'fm') newLayer = { ...base, type, fm: { carrier: 440, modulator: 880, modulationIndex: 100 } };
+    else if (type === 'fm') newLayer = { ...base, type, fm: { ratio: 1, waveform: 'sine', modulationIndex: 30, feedback: 0 } };
     else newLayer = { ...base, type, karplus: { frequency: 440, damping: 0.5, inharmonicity: 0 } };
     setConfig({ ...config, synthesis: { ...config.synthesis, layers: [...config.synthesis.layers, newLayer] } });
   };
@@ -1456,7 +1502,7 @@ export function SynthesizerUI() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 10 : 6 }}>
               {config.synthesis.layers.map((layer, i) => (
-                <LayerPanel key={i} layer={layer} index={i} selected={selectedLayer === i} onSelect={() => setSelectedLayer(selectedLayer === i ? -1 : i)} onUpdate={l => updateLayer(i, l)} onRemove={() => removeLayer(i)} canRemove={config.synthesis.layers.length > 1} isMobile={isMobile} isTablet={isTablet} knobSize={knobSize} btnSize={btnSize} toggleSize={toggleSize} TE={TE} />
+                <LayerPanel key={i} layer={layer} index={i} selected={selectedLayer === i} onSelect={() => setSelectedLayer(selectedLayer === i ? -1 : i)} onUpdate={l => updateLayer(i, l)} onRemove={() => removeLayer(i)} canRemove={config.synthesis.layers.length > 1} allLayers={config.synthesis.layers} isMobile={isMobile} isTablet={isTablet} knobSize={knobSize} btnSize={btnSize} toggleSize={toggleSize} TE={TE} />
               ))}
             </div>
           </div>

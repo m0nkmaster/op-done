@@ -20,15 +20,29 @@ interface LayerSources {
   output: AudioNode;
 }
 
+// Extended result for FM layers supporting inter-layer modulation
+export interface FMLayerResult extends LayerSources {
+  carrierFrequencyParam: AudioParam;  // For receiving modulation from other FM layers
+  modulationOutput: GainNode;         // For routing modulation to other FM layers
+  isFM: true;
+}
+
+// Type guard for FM layer results
+export function isFMLayerResult(result: LayerSources): result is FMLayerResult {
+  return 'isFM' in result && result.isFM === true;
+}
+
 /**
  * Create all sources for a single layer
+ * @param duration - Optional duration for envelope scheduling (static synthesis)
  */
 export function createLayerSources(
   ctx: AnyAudioContext,
   layer: SoundConfig['synthesis']['layers'][0],
   frequency: number,
-  startTime: number
-): LayerSources {
+  startTime: number,
+  duration?: number
+): LayerSources | FMLayerResult {
   const sources: AudioScheduledSourceNode[] = [];
   
   if (layer.type === 'oscillator' && layer.oscillator) {
@@ -36,7 +50,7 @@ export function createLayerSources(
   }
   
   if (layer.type === 'fm' && layer.fm) {
-    return createFMLayer(ctx, layer.fm, frequency, startTime, sources);
+    return createFMLayer(ctx, layer.fm as FMConfigNormalized, frequency, startTime, sources, duration);
   }
   
   if (layer.type === 'noise' && layer.noise) {
@@ -125,40 +139,104 @@ function createOscillatorLayer(
   return { sources, output: mixer };
 }
 
-function createFMLayer(
+// FM Config type after migration (always in new format)
+interface FMConfigNormalized {
+  ratio: number;
+  waveform?: 'sine' | 'square' | 'sawtooth' | 'triangle';
+  modulationIndex: number;
+  feedback?: number;
+  modulatesLayer?: number;
+  envelope?: { attack: number; decay: number; sustain: number; release: number };
+}
+
+/**
+ * Create FM layer (single operator)
+ * 
+ * Each FM layer is a single operator that can:
+ * - Output audio directly (when modulatesLayer is undefined)
+ * - Route modulation to another FM layer (when modulatesLayer is set)
+ * - Self-modulate via feedback
+ * 
+ * The carrier frequency = baseFrequency * ratio
+ * Modulation index controls the depth of modulation output
+ */
+export function createFMLayer(
   ctx: AnyAudioContext,
-  config: { carrier: number; modulator: number; modulationIndex: number },
+  config: FMConfigNormalized,
   frequency: number,
   startTime: number,
-  sources: AudioScheduledSourceNode[]
-): LayerSources {
-  const safeCarrier = safe(config.carrier, 1);
-  const safeModulator = safe(config.modulator, 1);
-  const safeModIndex = safe(config.modulationIndex, 1);
+  sources: AudioScheduledSourceNode[],
+  duration?: number
+): FMLayerResult {
+  const safeRatio = safe(config.ratio, 1);
+  const safeModIndex = safe(config.modulationIndex, 10);
+  const safeFeedback = safe(config.feedback, 0);
   const safeFreq = safe(frequency, 440);
+  const waveform = config.waveform || 'sine';
   
-  const ratio = safeCarrier > 0 ? safeModulator / safeCarrier : 1;
+  // Operator frequency = base frequency * ratio
+  const operatorFreq = Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, safeFreq * safeRatio));
   
+  // Create the carrier oscillator
   const carrier = ctx.createOscillator();
-  const modulator = ctx.createOscillator();
-  const modGain = ctx.createGain();
-  
-  const modulatorFreq = safeFreq * ratio;
-  carrier.frequency.value = safeFreq;
-  modulator.frequency.value = safe(modulatorFreq, 440);
-  
-  // FM modulation index (β) = Δf / f_mod, so Δf = β × f_mod
-  // The gain controls frequency deviation in Hz
-  modGain.gain.value = safe(safeModIndex * modulatorFreq, 440);
-  
-  modulator.connect(modGain);
-  modGain.connect(carrier.frequency);
-  
+  carrier.type = waveform;
+  carrier.frequency.value = operatorFreq;
   carrier.start(startTime);
-  modulator.start(startTime);
-  sources.push(carrier, modulator);
+  sources.push(carrier);
   
-  return { sources, output: carrier };
+  // Modulation output: this is what gets routed to other FM layers
+  // The modulation depth is scaled by modulationIndex and operator frequency
+  // FM formula: Δf = modulationIndex × modulatorFreq
+  const modulationOutput = ctx.createGain();
+  modulationOutput.gain.value = safeModIndex * operatorFreq;
+  carrier.connect(modulationOutput);
+  
+  // Apply per-operator envelope to modulation depth (critical for FM timbres)
+  if (config.envelope && duration !== undefined) {
+    const env = config.envelope;
+    const SILENCE = 0.0001;
+    const safeAttack = Math.max(0.001, env.attack);
+    const safeDecay = Math.max(0.001, env.decay);
+    const safeRelease = Math.max(0.001, env.release);
+    const peakGain = safeModIndex * operatorFreq;
+    const sustainGain = Math.max(SILENCE, env.sustain * peakGain);
+    const releaseStart = Math.max(safeAttack + safeDecay + 0.01, duration - safeRelease);
+    
+    modulationOutput.gain.setValueAtTime(SILENCE, startTime);
+    modulationOutput.gain.exponentialRampToValueAtTime(peakGain, startTime + safeAttack);
+    modulationOutput.gain.exponentialRampToValueAtTime(sustainGain, startTime + safeAttack + safeDecay);
+    modulationOutput.gain.setValueAtTime(sustainGain, startTime + releaseStart);
+    modulationOutput.gain.exponentialRampToValueAtTime(SILENCE, startTime + duration);
+  }
+  
+  // Self-modulation (feedback) via a tiny delay
+  // Feedback creates metallic/harsh tones (0.3 = metallic, 0.7+ = harsh/noisy)
+  if (safeFeedback > 0) {
+    // 1-sample delay approximation for feedback loop stability
+    const feedbackDelay = ctx.createDelay(0.01);
+    feedbackDelay.delayTime.value = 1 / ctx.sampleRate;
+    
+    const feedbackGain = ctx.createGain();
+    // Scale feedback to modulate frequency in Hz (similar to modulation index)
+    feedbackGain.gain.value = safeFeedback * operatorFreq * 2;
+    
+    carrier.connect(feedbackDelay);
+    feedbackDelay.connect(feedbackGain);
+    feedbackGain.connect(carrier.frequency);
+  }
+  
+  // Audio output (for layers that output to mixer rather than modulating another layer)
+  const audioOutput = ctx.createGain();
+  audioOutput.gain.value = 1;
+  carrier.connect(audioOutput);
+  
+  return {
+    sources,
+    output: audioOutput,
+    carrierFrequencyParam: carrier.frequency,
+    modulationOutput,
+    isFM: true,
+  };
 }
 
 function createNoiseLayer(

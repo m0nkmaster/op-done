@@ -157,22 +157,50 @@ synthesizeSound(config)
     ↓
 Create OfflineAudioContext
     ↓
-For each layer:
-    ├── Create source (oscillator/noise/FM/KS)
-    ├── Apply layer filter
-    ├── Apply saturation
-    ├── Apply layer envelope
-    └── Connect to mixer
+Pass 1 — Create all layers:
+    For each layer:
+        ├── Create source (oscillator/noise/FM/KS)
+        ├── For FM: track carrierFrequencyParam & modulationOutput
+        ├── Apply layer filter
+        ├── Apply saturation
+        └── Apply layer envelope
+    ↓
+Pass 2 — FM routing:
+    For each FM layer with modulatesLayer:
+        └── Connect modulationOutput → target's carrierFrequencyParam
+    For other layers:
+        └── Connect to mixer
     ↓
 Apply: global filter → master envelope → LFO
     ↓
 Apply effects chain:
-    distortion → compressor → gate → delay → reverb
+    EQ → distortion → compressor → chorus → delay → reverb → gate
     ↓
 Render → Normalize (optional)
     ↓
 Play AudioBuffer / Export WAV
 ```
+
+#### FM Layer Architecture
+
+FM layers support inter-layer modulation:
+
+```
+[Modulator FM Layer]
+    ratio: 3, modulatesLayer: 1
+         │
+         ▼ modulationOutput → carrierFrequencyParam
+[Carrier FM Layer]
+    ratio: 1, modulatesLayer: undefined
+         │
+         ▼ audioOutput
+      Mixer → Effects → Output
+```
+
+- Each FM layer has a `ratio` (frequency multiplier) instead of absolute Hz
+- `feedback` (0-1) enables self-modulation via 1-sample delay
+- `modulatesLayer` routes modulation to another FM layer's carrier frequency
+- `envelope` shapes modulation depth over time (per-operator envelope)
 
 ### MIDI Input
 

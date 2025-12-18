@@ -7,6 +7,8 @@ import {
   createEffectsChain,
   createLFO,
   applyPitchEnvelope,
+  isFMLayerResult,
+  type FMLayerResult,
 } from './synthCore';
 
 function safeValue(value: number, fallback = 0): number {
@@ -25,19 +27,39 @@ export async function synthesizeSound(config: SoundConfig): Promise<AudioBuffer>
   );
 
   const mixer = ctx.createGain();
-  const sources: AudioScheduledSourceNode[] = [];
   const allSources: AudioScheduledSourceNode[] = [];
 
-  for (const layer of config.synthesis.layers) {
-    // Use shared core for layer source creation
-    const layerFreq = layer.oscillator?.frequency ?? layer.fm?.carrier ?? layer.karplus?.frequency ?? 440;
-    const { sources: layerSources, output } = createLayerSources(ctx, layer, safeValue(layerFreq, 440), 0);
-    let chain: AudioNode = output;
+  // === FM ROUTING: Two-pass processing ===
+  // Pass 1: Create all layers, collecting FM layer results for routing
+  interface LayerResult {
+    layerIndex: number;
+    result: ReturnType<typeof createLayerSources>;
+    layer: SoundConfig['synthesis']['layers'][0];
+    chain: AudioNode;
+    layerGain: GainNode;
+  }
+  const layerResults: LayerResult[] = [];
+  const fmLayerResults: Map<number, FMLayerResult> = new Map();
+
+  for (let i = 0; i < config.synthesis.layers.length; i++) {
+    const layer = config.synthesis.layers[i];
+    // Get base frequency for the layer
+    // For FM layers, use oscillator frequency as base (ratio is applied internally)
+    const layerFreq = layer.oscillator?.frequency ?? layer.karplus?.frequency ?? 440;
+    
+    // Pass duration for FM envelope scheduling
+    const result = createLayerSources(ctx, layer, safeValue(layerFreq, 440), 0, config.timing.duration);
+    let chain: AudioNode = result.output;
+
+    // Track FM layers for routing
+    if (isFMLayerResult(result)) {
+      fmLayerResults.set(i, result);
+    }
 
     // Apply pitch envelope to oscillator sources
     if (layer.oscillator?.pitchEnvelope) {
       const pitchEnv = layer.oscillator.pitchEnvelope;
-      for (const source of layerSources) {
+      for (const source of result.sources) {
         if (source instanceof OscillatorNode) {
           applyPitchEnvelope(source.frequency, layerFreq, pitchEnv, 0, config.timing.duration);
         }
@@ -64,9 +86,32 @@ export async function synthesizeSound(config: SoundConfig): Promise<AudioBuffer>
     }
 
     chain.connect(layerGain);
-    layerGain.connect(mixer);
+    
+    layerResults.push({ layerIndex: i, result, layer, chain, layerGain });
+    allSources.push(...result.sources);
+  }
 
-    allSources.push(...layerSources);
+  // Pass 2: Wire up FM modulation routing
+  for (const { layerIndex, layer, layerGain } of layerResults) {
+    const fmResult = fmLayerResults.get(layerIndex);
+    
+    if (fmResult && layer.fm?.modulatesLayer !== undefined) {
+      // This FM layer modulates another FM layer
+      const targetIndex = layer.fm.modulatesLayer;
+      const targetFM = fmLayerResults.get(targetIndex);
+      
+      if (targetFM) {
+        // Route modulation output to target's carrier frequency
+        fmResult.modulationOutput.connect(targetFM.carrierFrequencyParam);
+        // Don't connect to mixer (this is a modulator, not an audio output)
+      } else {
+        // Target not found or not an FM layer - fall back to audio output
+        layerGain.connect(mixer);
+      }
+    } else {
+      // Normal audio output to mixer
+      layerGain.connect(mixer);
+    }
   }
 
   const filter = config.filter ? createFilter(ctx, config.filter) : null;
@@ -104,11 +149,8 @@ export async function synthesizeSound(config: SoundConfig): Promise<AudioBuffer>
   outputChain.connect(effectsInput);
   effectsOutput.connect(ctx.destination);
 
+  // Stop all sources at the end of the sound duration
   const stopTime = config.timing.duration;
-  sources.forEach(s => {
-    s.start(0);
-    s.stop(stopTime);
-  });
   allSources.forEach(s => s.stop(stopTime));
 
   const buffer = await ctx.startRendering();

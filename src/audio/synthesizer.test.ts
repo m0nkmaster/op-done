@@ -65,8 +65,81 @@ describe('synthesizeSound', () => {
         layers: [{
           type: 'fm',
           gain: 0.7,
+          fm: { ratio: 2, waveform: 'sine', modulationIndex: 30, feedback: 0 }
+        }]
+      }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should synthesize FM with legacy carrier/modulator format (migration)', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      synthesis: {
+        layers: [{
+          type: 'fm',
+          gain: 0.7,
           fm: { carrier: 200, modulator: 400, modulationIndex: 30 }
         }]
+      }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should synthesize FM with feedback', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      synthesis: {
+        layers: [{
+          type: 'fm',
+          gain: 0.7,
+          fm: { ratio: 1, waveform: 'sine', modulationIndex: 20, feedback: 0.5 }
+        }]
+      }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should synthesize FM with operator envelope', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      synthesis: {
+        layers: [{
+          type: 'fm',
+          gain: 0.7,
+          fm: { 
+            ratio: 2, 
+            waveform: 'sine', 
+            modulationIndex: 40, 
+            feedback: 0,
+            envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 }
+          }
+        }]
+      }
+    };
+    const buffer = await synthesizeSound(config);
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('should route FM layers to modulate each other', async () => {
+    const config: SoundConfig = {
+      ...baseConfig,
+      synthesis: {
+        layers: [
+          {
+            type: 'fm',
+            gain: 0.7,
+            fm: { ratio: 3, waveform: 'sine', modulationIndex: 50, feedback: 0, modulatesLayer: 1 }
+          },
+          {
+            type: 'fm',
+            gain: 0.7,
+            fm: { ratio: 1, waveform: 'sine', modulationIndex: 10, feedback: 0 }
+          }
+        ]
       }
     };
     const buffer = await synthesizeSound(config);
@@ -417,14 +490,15 @@ describe('Property-Based Tests', () => {
                     type: fc.constantFrom('white', 'pink', 'brown'),
                   }),
                 }),
-                // FM layer
+                // FM layer (new ratio-based format)
                 fc.record({
                   type: fc.constant('fm' as const),
                   gain: validFloat(0, 1),
                   fm: fc.record({
-                    carrier: validFloat(20, 20000),
-                    modulator: validFloat(20, 20000),
-                    modulationIndex: validFloat(0, 1000),
+                    ratio: validFloat(0.5, 16),
+                    waveform: fc.constantFrom('sine', 'square', 'sawtooth', 'triangle'),
+                    modulationIndex: validFloat(0, 100),
+                    feedback: validFloat(0, 1),
                   }),
                 }),
                 // Karplus-Strong layer
