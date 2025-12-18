@@ -180,12 +180,14 @@ function applyEnvelope(
   const releaseStart = Math.max(safeAttack + safeDecay, duration - safeRelease);
 
   // Use 0.0001 (-80dB) as silence floor instead of 0.001 (-60dB) to prevent hiss
+  // exponentialRampToValueAtTime can't target 0, so ensure peakValue is at least SILENCE
   const SILENCE = 0.0001;
+  const safePeak = Math.max(SILENCE, peakValue);
 
   param.setValueAtTime(SILENCE, 0);
-  param.exponentialRampToValueAtTime(peakValue, safeAttack);
-  param.exponentialRampToValueAtTime(Math.max(SILENCE, peakValue * sustainLevel), safeAttack + safeDecay);
-  param.setValueAtTime(Math.max(SILENCE, peakValue * sustainLevel), releaseStart);
+  param.exponentialRampToValueAtTime(safePeak, safeAttack);
+  param.exponentialRampToValueAtTime(Math.max(SILENCE, safePeak * sustainLevel), safeAttack + safeDecay);
+  param.setValueAtTime(Math.max(SILENCE, safePeak * sustainLevel), releaseStart);
   param.exponentialRampToValueAtTime(SILENCE, duration);
 }
 

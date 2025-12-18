@@ -883,10 +883,12 @@ export function applyADSREnvelope(
   const SILENCE = 0.0001;
   const safeAttack = Math.max(0.001, envelope.attack);
   const safeDecay = Math.max(0.001, envelope.decay);
-  const sustainLevel = Math.max(SILENCE, envelope.sustain * peakValue);
+  // exponentialRampToValueAtTime can't target 0, so ensure peakValue is at least SILENCE
+  const safePeak = Math.max(SILENCE, peakValue);
+  const sustainLevel = Math.max(SILENCE, envelope.sustain * safePeak);
   
   param.setValueAtTime(SILENCE, startTime);
-  param.exponentialRampToValueAtTime(peakValue, startTime + safeAttack);
+  param.exponentialRampToValueAtTime(safePeak, startTime + safeAttack);
   param.exponentialRampToValueAtTime(sustainLevel, startTime + safeAttack + safeDecay);
   
   return sustainLevel;
