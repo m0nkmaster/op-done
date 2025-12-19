@@ -11,15 +11,9 @@ variable "lambda_function_name" {
 }
 
 variable "domain_name" {
-  description = "Root domain name"
+  description = "Domain name for the application"
   type        = string
-  default     = "robmacdonald.com"
-}
-
-variable "app_path" {
-  description = "Path prefix for the application"
-  type        = string
-  default     = "synthtools"
+  default     = "synthtools.robmacdonald.com"
 }
 
 variable "route53_zone_id" {

@@ -10,7 +10,7 @@ import { JSONEditor } from '../components/JSONEditor';
 import { ValidationDisplay } from '../components/ValidationDisplay';
 import { useDefaultPreset } from '../hooks/useDefaultPreset';
 import { synthesizeSound } from '../audio/synthesizer';
-import { BOUNDS } from '../types/soundConfig';
+import { BOUNDS, waveformEnum, globalFilterTypeEnum, filterTypeEnum, noiseTypeEnum, saturationTypeEnum, lfoWaveformEnum, lfoTargetEnum, distortionTypeEnum } from '../types/soundConfig';
 import { validateSoundConfigJSON, type ValidationResult } from '../utils/validation';
 import { generateSoundConfig, type AIProvider } from '../services/ai';
 import { useThemeMode } from '../context/ThemeContext';
@@ -18,6 +18,16 @@ import { TE_COLORS } from '../theme';
 import type { SoundConfig } from '../types/soundConfig';
 import { useMidi, midiNoteToName, type MidiNote } from '../hooks/useMidi';
 import { RealtimeSynth } from '../audio/realtimeSynth';
+import type { z } from 'zod';
+
+type Waveform = z.infer<typeof waveformEnum>;
+type FilterType = z.infer<typeof filterTypeEnum>;
+type GlobalFilterType = z.infer<typeof globalFilterTypeEnum>;
+type NoiseType = z.infer<typeof noiseTypeEnum>;
+type SaturationType = z.infer<typeof saturationTypeEnum>;
+type LfoWaveform = z.infer<typeof lfoWaveformEnum>;
+type LfoTarget = z.infer<typeof lfoTargetEnum>;
+type DistortionType = z.infer<typeof distortionTypeEnum>;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // THEME-AWARE DESIGN TOKENS
@@ -610,8 +620,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 8 }}>
               <Module label="OSCILLATOR" color={cfg.color} isMobile={isMobile} TE={TE}>
                 <div style={{ display: 'flex', gap: isMobile ? 6 : 2, marginRight: 8, flexWrap: 'wrap' }}>
-                  {['sine', 'square', 'sawtooth', 'triangle'].map(wf => (
-                    <Btn key={wf} active={layer.oscillator!.waveform === wf} onClick={() => updateOsc({ waveform: wf as any })} color={cfg.color} small size={btnSize} TE={TE}>
+                  {(['sine', 'square', 'sawtooth', 'triangle'] as const).map(wf => (
+                    <Btn key={wf} active={layer.oscillator!.waveform === wf} onClick={() => updateOsc({ waveform: wf as Waveform })} color={cfg.color} small size={btnSize} TE={TE}>
                       {wf === 'sine' ? '∿' : wf === 'square' ? '⊓' : wf === 'sawtooth' ? '⋰' : '△'}
                     </Btn>
                   ))}
@@ -653,8 +663,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
               <Module label="FILTER" color={TE.cyan} on={!!layer.filter} onToggle={() => onUpdate({ ...layer, filter: layer.filter ? undefined : { type: 'lowpass', frequency: 2000, q: 1 } })} isMobile={isMobile} TE={TE}>
                 {layer.filter && <>
                   <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                    {['lowpass', 'highpass', 'bandpass', 'notch'].map(t => (
-                      <Btn key={t} active={layer.filter!.type === t} onClick={() => onUpdate({ ...layer, filter: { ...layer.filter!, type: t as any } })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
+                    {(['lowpass', 'highpass', 'bandpass', 'notch'] as const).map(t => (
+                      <Btn key={t} active={layer.filter!.type === t} onClick={() => onUpdate({ ...layer, filter: { ...layer.filter!, type: t as FilterType } })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
                     ))}
                   </div>
                   <MiniKnob value={layer.filter.frequency} min={20} max={20000} onChange={v => onUpdate({ ...layer, filter: { ...layer.filter!, frequency: v } })} label="FRQ" color={TE.cyan} logarithmic size={knobSize} TE={TE} />
@@ -675,8 +685,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
               <Module label="SATURATION" color={TE.yellow} on={!!layer.saturation} onToggle={() => onUpdate({ ...layer, saturation: layer.saturation ? undefined : { type: 'soft', drive: 2, mix: 0.5 } })} isMobile={isMobile} TE={TE}>
                 {layer.saturation && <>
                   <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                    {['soft', 'hard', 'tube', 'tape'].map(t => (
-                      <Btn key={t} active={layer.saturation!.type === t} onClick={() => onUpdate({ ...layer, saturation: { ...layer.saturation!, type: t as any } })} color={TE.yellow} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
+                    {(['soft', 'hard', 'tube', 'tape'] as const).map(t => (
+                      <Btn key={t} active={layer.saturation!.type === t} onClick={() => onUpdate({ ...layer, saturation: { ...layer.saturation!, type: t as SaturationType } })} color={TE.yellow} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
                     ))}
                   </div>
                   <MiniKnob value={layer.saturation.drive} min={0} max={10} onChange={v => onUpdate({ ...layer, saturation: { ...layer.saturation!, drive: v } })} label="DRV" color={TE.yellow} size={knobSize} TE={TE} />
@@ -708,8 +718,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 8 }}>
               <Module label="FM OPERATOR" color={cfg.color} isMobile={isMobile} TE={TE}>
                 <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap', marginBottom: 4 }}>
-                  {['sine', 'square', 'sawtooth', 'triangle'].map(w => (
-                    <Btn key={w} active={(fmConfig.waveform || 'sine') === w} onClick={() => updateFM({ waveform: w as any })} color={cfg.color} small size={btnSize} TE={TE}>{w.slice(0, 3).toUpperCase()}</Btn>
+                  {(['sine', 'square', 'sawtooth', 'triangle'] as const).map(w => (
+                    <Btn key={w} active={(fmConfig.waveform || 'sine') === w} onClick={() => updateFM({ waveform: w as Waveform })} color={cfg.color} small size={btnSize} TE={TE}>{w.slice(0, 3).toUpperCase()}</Btn>
                   ))}
                 </div>
                 <MiniKnob value={fmConfig.ratio ?? 1} min={0.5} max={16} onChange={v => updateFM({ ratio: v })} label="RATIO" color={cfg.color} size={knobSize} TE={TE} />
@@ -757,8 +767,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
               <Module label="FILTER" color={TE.cyan} on={!!layer.filter} onToggle={() => onUpdate({ ...layer, filter: layer.filter ? undefined : { type: 'lowpass', frequency: 2000, q: 1 } })} isMobile={isMobile} TE={TE}>
                 {layer.filter && <>
                   <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                    {['lowpass', 'highpass', 'bandpass', 'notch'].map(t => (
-                      <Btn key={t} active={layer.filter!.type === t} onClick={() => onUpdate({ ...layer, filter: { ...layer.filter!, type: t as any } })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
+                    {(['lowpass', 'highpass', 'bandpass', 'notch'] as const).map(t => (
+                      <Btn key={t} active={layer.filter!.type === t} onClick={() => onUpdate({ ...layer, filter: { ...layer.filter!, type: t as FilterType } })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
                     ))}
                   </div>
                   <MiniKnob value={layer.filter.frequency} min={20} max={20000} onChange={v => onUpdate({ ...layer, filter: { ...layer.filter!, frequency: v } })} label="FRQ" color={TE.cyan} logarithmic size={knobSize} TE={TE} />
@@ -779,8 +789,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
               <Module label="SATURATION" color={TE.pink} on={!!layer.saturation} onToggle={() => onUpdate({ ...layer, saturation: layer.saturation ? undefined : { type: 'soft', drive: 2, mix: 0.5 } })} isMobile={isMobile} TE={TE}>
                 {layer.saturation && <>
                   <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                    {['soft', 'hard', 'tube', 'tape'].map(t => (
-                      <Btn key={t} active={layer.saturation!.type === t} onClick={() => onUpdate({ ...layer, saturation: { ...layer.saturation!, type: t as any } })} color={TE.pink} small size={btnSize} TE={TE}>{t.toUpperCase()}</Btn>
+                    {(['soft', 'hard', 'tube', 'tape'] as const).map(t => (
+                      <Btn key={t} active={layer.saturation!.type === t} onClick={() => onUpdate({ ...layer, saturation: { ...layer.saturation!, type: t as SaturationType } })} color={TE.pink} small size={btnSize} TE={TE}>{t.toUpperCase()}</Btn>
                     ))}
                   </div>
                   <MiniKnob value={layer.saturation.drive} min={0} max={10} onChange={v => onUpdate({ ...layer, saturation: { ...layer.saturation!, drive: v } })} label="DRV" color={TE.pink} size={knobSize} TE={TE} />
@@ -809,8 +819,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
               <Module label="FILTER" color={TE.cyan} on={!!layer.filter} onToggle={() => onUpdate({ ...layer, filter: layer.filter ? undefined : { type: 'lowpass', frequency: 4000, q: 1 } })} isMobile={isMobile} TE={TE}>
                 {layer.filter && <>
                   <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                    {['lowpass', 'highpass', 'bandpass', 'notch'].map(t => (
-                      <Btn key={t} active={layer.filter!.type === t} onClick={() => onUpdate({ ...layer, filter: { ...layer.filter!, type: t as any } })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
+                    {(['lowpass', 'highpass', 'bandpass', 'notch'] as const).map(t => (
+                      <Btn key={t} active={layer.filter!.type === t} onClick={() => onUpdate({ ...layer, filter: { ...layer.filter!, type: t as FilterType } })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
                     ))}
                   </div>
                   <MiniKnob value={layer.filter.frequency} min={20} max={20000} onChange={v => onUpdate({ ...layer, filter: { ...layer.filter!, frequency: v } })} label="FRQ" color={TE.cyan} logarithmic size={knobSize} TE={TE} />
@@ -831,8 +841,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
               <Module label="SATURATION" color={TE.pink} on={!!layer.saturation} onToggle={() => onUpdate({ ...layer, saturation: layer.saturation ? undefined : { type: 'soft', drive: 2, mix: 0.5 } })} isMobile={isMobile} TE={TE}>
                 {layer.saturation && <>
                   <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                    {['soft', 'hard', 'tube', 'tape'].map(t => (
-                      <Btn key={t} active={layer.saturation!.type === t} onClick={() => onUpdate({ ...layer, saturation: { ...layer.saturation!, type: t as any } })} color={TE.pink} small size={btnSize} TE={TE}>{t.toUpperCase()}</Btn>
+                    {(['soft', 'hard', 'tube', 'tape'] as const).map(t => (
+                      <Btn key={t} active={layer.saturation!.type === t} onClick={() => onUpdate({ ...layer, saturation: { ...layer.saturation!, type: t as SaturationType } })} color={TE.pink} small size={btnSize} TE={TE}>{t.toUpperCase()}</Btn>
                     ))}
                   </div>
                   <MiniKnob value={layer.saturation.drive} min={0} max={10} onChange={v => onUpdate({ ...layer, saturation: { ...layer.saturation!, drive: v } })} label="DRV" color={TE.pink} size={knobSize} TE={TE} />
@@ -846,8 +856,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 8 }}>
               <Module label="NOISE TYPE" color={cfg.color} isMobile={isMobile} TE={TE}>
                 <div style={{ display: 'flex', gap: isMobile ? 6 : 3, flexWrap: 'wrap' }}>
-                  {[{ k: 'white', l: 'WHITE' }, { k: 'pink', l: 'PINK' }, { k: 'brown', l: 'BROWN' }].map(t => (
-                    <Btn key={t.k} active={layer.noise!.type === t.k} onClick={() => onUpdate({ ...layer, noise: { type: t.k as any } })} color={cfg.color} size={btnSize} TE={TE}>{t.l}</Btn>
+                  {([{ k: 'white' as const, l: 'WHITE' }, { k: 'pink' as const, l: 'PINK' }, { k: 'brown' as const, l: 'BROWN' }]).map(t => (
+                    <Btn key={t.k} active={layer.noise!.type === t.k} onClick={() => onUpdate({ ...layer, noise: { type: t.k as NoiseType } })} color={cfg.color} size={btnSize} TE={TE}>{t.l}</Btn>
                   ))}
                 </div>
               </Module>
@@ -862,8 +872,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
               <Module label="FILTER" color={TE.cyan} on={!!layer.filter} onToggle={() => onUpdate({ ...layer, filter: layer.filter ? undefined : { type: 'lowpass', frequency: 2000, q: 1 } })} isMobile={isMobile} TE={TE}>
                 {layer.filter && <>
                   <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                    {['lowpass', 'highpass', 'bandpass', 'notch'].map(t => (
-                      <Btn key={t} active={layer.filter!.type === t} onClick={() => onUpdate({ ...layer, filter: { ...layer.filter!, type: t as any } })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
+                    {(['lowpass', 'highpass', 'bandpass', 'notch'] as const).map(t => (
+                      <Btn key={t} active={layer.filter!.type === t} onClick={() => onUpdate({ ...layer, filter: { ...layer.filter!, type: t as FilterType } })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
                     ))}
                   </div>
                   <MiniKnob value={layer.filter.frequency} min={20} max={20000} onChange={v => onUpdate({ ...layer, filter: { ...layer.filter!, frequency: v } })} label="FRQ" color={TE.cyan} logarithmic size={knobSize} TE={TE} />
@@ -884,8 +894,8 @@ function LayerPanel({ layer, index, selected, onSelect, onUpdate, onRemove, canR
               <Module label="SATURATION" color={TE.pink} on={!!layer.saturation} onToggle={() => onUpdate({ ...layer, saturation: layer.saturation ? undefined : { type: 'soft', drive: 2, mix: 0.5 } })} isMobile={isMobile} TE={TE}>
                 {layer.saturation && <>
                   <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                    {['soft', 'hard', 'tube', 'tape'].map(t => (
-                      <Btn key={t} active={layer.saturation!.type === t} onClick={() => onUpdate({ ...layer, saturation: { ...layer.saturation!, type: t as any } })} color={TE.pink} small size={btnSize} TE={TE}>{t.toUpperCase()}</Btn>
+                    {(['soft', 'hard', 'tube', 'tape'] as const).map(t => (
+                      <Btn key={t} active={layer.saturation!.type === t} onClick={() => onUpdate({ ...layer, saturation: { ...layer.saturation!, type: t as SaturationType } })} color={TE.pink} small size={btnSize} TE={TE}>{t.toUpperCase()}</Btn>
                     ))}
                   </div>
                   <MiniKnob value={layer.saturation.drive} min={0} max={10} onChange={v => onUpdate({ ...layer, saturation: { ...layer.saturation!, drive: v } })} label="DRV" color={TE.pink} size={knobSize} TE={TE} />
@@ -1084,7 +1094,7 @@ export function SynthesizerUI() {
             const description = presetConfig.metadata?.description;
             
             return { name, path, category, description };
-          } catch (err) {
+          } catch {
             // If loading fails, fall back to filename
             const filename = path.split('/').pop() || '';
             const name = filename.replace('.json', '').replace(/-/g, ' ');
@@ -1756,13 +1766,13 @@ export function SynthesizerUI() {
             {config.lfo && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 8 }}>
                 <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                  {['sine', 'square', 'sawtooth', 'triangle', 'random'].map(w => (
-                    <Btn key={w} active={config.lfo!.waveform === w} onClick={() => updateLFO({ ...config.lfo!, waveform: w as any })} color={TE.yellow} small size={btnSize} TE={TE}>{w.slice(0, 3).toUpperCase()}</Btn>
+                  {(['sine', 'square', 'sawtooth', 'triangle', 'random'] as const).map(w => (
+                    <Btn key={w} active={config.lfo!.waveform === w} onClick={() => updateLFO({ ...config.lfo!, waveform: w as LfoWaveform })} color={TE.yellow} small size={btnSize} TE={TE}>{w.slice(0, 3).toUpperCase()}</Btn>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                  {['pitch', 'filter', 'amplitude', 'pan'].map(t => (
-                    <Btn key={t} active={config.lfo!.target === t} onClick={() => updateLFO({ ...config.lfo!, target: t as any })} color={TE.yellow} small size={btnSize} TE={TE}>{t.slice(0, 3).toUpperCase()}</Btn>
+                  {(['pitch', 'filter', 'amplitude', 'pan'] as const).map(t => (
+                    <Btn key={t} active={config.lfo!.target === t} onClick={() => updateLFO({ ...config.lfo!, target: t as LfoTarget })} color={TE.yellow} small size={btnSize} TE={TE}>{t.slice(0, 3).toUpperCase()}</Btn>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: isMobile ? 12 : 8, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -1787,8 +1797,8 @@ export function SynthesizerUI() {
             {config.filter && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 8 }}>
                 <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                  {['lowpass', 'highpass', 'bandpass', 'notch', 'allpass', 'peaking'].map(t => (
-                    <Btn key={t} active={config.filter!.type === t} onClick={() => updateFilter({ ...config.filter!, type: t as any })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
+                  {(['lowpass', 'highpass', 'bandpass', 'notch', 'allpass', 'peaking'] as const).map(t => (
+                    <Btn key={t} active={config.filter!.type === t} onClick={() => updateFilter({ ...config.filter!, type: t as GlobalFilterType })} color={TE.cyan} small size={btnSize} TE={TE}>{t.slice(0, 2).toUpperCase()}</Btn>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: isMobile ? 12 : 8, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -1854,8 +1864,8 @@ export function SynthesizerUI() {
 
               <Effect name="DISTORT" on={!!config.effects.distortion} onToggle={() => config.effects.distortion ? updateEffects({ ...config.effects, distortion: undefined }) : updateEffects({ ...config.effects, distortion: { type: 'soft', amount: 0.5, mix: 0.5 } })} color={TE.orange} isMobile={isMobile} toggleSize={toggleSize} TE={TE}>
                 <div style={{ display: 'flex', gap: isMobile ? 6 : 2, flexWrap: 'wrap' }}>
-                  {['soft', 'hard', 'fuzz', 'bitcrush', 'waveshaper'].map(t => (
-                    <Btn key={t} active={config.effects.distortion?.type === t} onClick={() => updateEffects({ ...config.effects, distortion: { ...config.effects.distortion!, type: t as any } })} color={TE.orange} small size={btnSize} TE={TE}>{t === 'bitcrush' ? 'BIT' : t === 'waveshaper' ? 'WS' : t.slice(0, 2).toUpperCase()}</Btn>
+                  {(['soft', 'hard', 'fuzz', 'bitcrush', 'waveshaper'] as const).map(t => (
+                    <Btn key={t} active={config.effects.distortion?.type === t} onClick={() => updateEffects({ ...config.effects, distortion: { ...config.effects.distortion!, type: t as DistortionType } })} color={TE.orange} small size={btnSize} TE={TE}>{t === 'bitcrush' ? 'BIT' : t === 'waveshaper' ? 'WS' : t.slice(0, 2).toUpperCase()}</Btn>
                   ))}
                 </div>
                 <MiniKnob value={config.effects.distortion?.amount || 0.5} min={0} max={1} onChange={v => updateEffects({ ...config.effects, distortion: { ...config.effects.distortion!, amount: v } })} label="AMT" color={TE.orange} size={knobSize} TE={TE} />

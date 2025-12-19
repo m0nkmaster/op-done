@@ -2,8 +2,7 @@
 # terraform.tfvars is gitignored
 
 aws_region      = "eu-west-2"
-domain_name     = "robmacdonald.com"
-app_path        = "synthtools"
+domain_name     = "synthtools.robmacdonald.com"
 route53_zone_id = "ZXXXXXXXXXXXXXXXXX"  # Find in Route53 console
 
 # API keys - REQUIRED. Set via one of these methods:
