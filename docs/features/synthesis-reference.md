@@ -569,3 +569,5 @@ No high-frequency content, avoid reverb
 - Shorter reverb decays (0.8-1.5s)
 - Add slight unison detuning (8-15 cents)
 
+
+

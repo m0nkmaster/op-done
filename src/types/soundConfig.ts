@@ -188,7 +188,9 @@ const pitchEnvelopeSchema = z.object({
 
 const oscillatorConfigSchema = z.object({
   waveform: waveformEnum,
-  frequency: z.number().min(BOUNDS.oscillator.frequency.min).max(BOUNDS.oscillator.frequency.max).default(440),
+  frequency: z.number().default(440).transform(f => 
+    f <= 0 ? 440 : Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, f))
+  ),
   detune: z.number().min(BOUNDS.oscillator.detune.min).max(BOUNDS.oscillator.detune.max).default(0),
   unison: unisonSchema.optional(),
   sub: subOscillatorSchema.optional(),
@@ -217,7 +219,9 @@ const fmConfigSchema = z.object({
 });
 
 const karplusConfigSchema = z.object({
-  frequency: z.number().min(BOUNDS.karplus.frequency.min).max(BOUNDS.karplus.frequency.max),
+  frequency: z.number().transform(f => 
+    f <= 0 ? 440 : Math.max(BOUNDS.karplus.frequency.min, Math.min(BOUNDS.karplus.frequency.max, f))
+  ),
   damping: z.number().min(BOUNDS.karplus.damping.min).max(BOUNDS.karplus.damping.max),
   inharmonicity: z.number().min(BOUNDS.karplus.inharmonicity.min).max(BOUNDS.karplus.inharmonicity.max).optional(),
 });
@@ -668,7 +672,7 @@ LAYER TYPES & CHARACTERISTICS:
 
 oscillator: Periodic waveforms. Best for synth sounds, basses, leads, pads
   * Waveforms: sine=pure/soft/sub, triangle=warm/mellow, sawtooth=bright/rich (most versatile), square=hollow/video-game
-  * frequency: ${range(b.oscillator.frequency, 'Hz')}
+  * frequency: ${range(b.oscillator.frequency, 'Hz')} - MUST be valid frequency (not 0). Use 440 if unsure (MIDI notes override this for playback)
   * detune: ${range(b.oscillator.detune, 'cents')}
   * unison: ${range(b.unison.voices)} voices (typical: 2-3), detune ${range(b.unison.detune, 'cents')} (typical: 10-20), spread ${range(b.unison.spread)} (typical: 0.2-0.4)
   * sub: Level ${range(b.sub.level)} (bass: 0.4-0.6), 1-2 octaves below

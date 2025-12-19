@@ -92,3 +92,5 @@ This properly implements the FM formula: **Δf = I × fm**
 The issue was purely that the **example values were wrong** (12 instead of 5).
 
 
+
+
