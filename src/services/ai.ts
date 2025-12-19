@@ -13,17 +13,38 @@ Multi-layer additive/subtractive/FM/physical modeling synthesizer. Supports 1-8 
 
 ${generateParameterGuide()}
 
-ACOUSTIC INSTRUMENT GUIDANCE:
-- Grand Piano: Use karplus-strong (inharmonicity: 0.35-0.45, damping: 0.15-0.25). CRITICAL: attack: 0.005-0.015s (soft hammer strike, NOT instant pluck). Add noise layer (attack: 0.001, decay: 0.05-0.1) for hammer impact. Decay: 3-5s for rich sustain.
-- Harpsichord: Fast attack (0.001s), bright oscillators or karplus-strong (inharmonicity: 0.1-0.2, damping: 0.3-0.4), short decay (1-2s)
-- Electric Piano (Rhodes/Wurlitzer): FM layers (ratio: 1, 2, modulationIndex: 0.01-0.03, feedback: 0.05-0.15). Medium attack (0.002-0.005s), decay: 2-3s
-- Acoustic Bass: Karplus-strong (frequency: 80-200Hz, damping: 0.3-0.5, low inharmonicity: 0.1-0.2), slow attack (0.01-0.03s)
-- Synth Bass: Oscillator (sawtooth/square), sub-oscillator, low-pass filter with envelope (amount: 2000-4000Hz), slow attack (0.02-0.05s) for warmth
-- Plucked Strings: Karplus-strong or fast attack (<0.002s), short decay
-- Brass: Oscillators (sawtooth) with vibrato LFO (target: pitch, depth: 0.02-0.05, rate: 4-6Hz), filter sweep
-- Strings: Oscillators with slow attack (0.2-0.8s), unison (3-5 voices), chorus effect
+SYNTHESIS THEORY:
 
-You DO NOT need to use all effects and features.
+Layer Gain Balancing:
+- Total gain across all layers should sum to ~0.8-1.2 (normalize handles peaks)
+- Balance relative levels: primary tone vs supporting layers vs transients
+
+Envelope Timing:
+- Attack affects perceived character: <0.002s=instant/percussive, 0.002-0.01s=struck, 0.01-0.05s=soft, 0.05-0.2s=bowed/blown, 0.2s+=swell
+- For one-shot sounds: sustain=0, decay becomes the body length
+- For held notes: sustain=0.5-1.0, decay is initial falloff
+
+Filter Envelope Technique:
+- Sweeping filter creates timbral evolution (mimics natural acoustic behavior)
+- Positive amount: sweeps brighter then settles darker
+- Negative amount: starts bright, sweeps darker
+
+Karplus-Strong Implementation Detail:
+- Initializes delay line with full-amplitude noise burst at t=0
+- This creates an INSTANT pluck transient regardless of layer envelope attack setting
+- Layer envelope controls amplitude fade-in but cannot soften the initial excitation
+- Suitable for: harp, harpsichord, pizzicato, plucked strings, mallets
+- May not suit sounds requiring soft/gradual attack (piano hammers, bowed strings)
+
+FM Modulation Index:
+- Scale is 0-1 (not 0-100): 0.01-0.05=subtle, 0.1-0.3=moderate, 0.4-0.7=strong, 0.8-1.0=extreme
+
+Multi-Layer Strategies:
+- Spectral layering: Different waveforms at different frequency ranges
+- Temporal layering: Different envelope timings (fast transient + slow body)
+- Timbral layering: Clean foundation + textural elements (noise, subtle FM)
+
+You DO NOT need to use all effects and features. Experiment to achieve desired sound character.
 
 TECHNICAL SPECIFICATIONS:
 ${generateSchemaPrompt()}
@@ -126,6 +147,9 @@ function processAIResponse(data: Record<string, unknown>): SoundConfig {
   // Handle Gemini's quirk of stringifying nested objects
   parseStringifiedObjects(data);
   
+  // Auto-correct common AI mistakes before validation
+  normalizeAIResponse(data);
+  
   // Log the raw response for debugging
   console.log('[AI Response Debug] Raw data:', JSON.stringify(data, null, 2));
   
@@ -137,6 +161,21 @@ function processAIResponse(data: Record<string, unknown>): SoundConfig {
     console.error('[AI Response Error] Validation failed:', error);
     console.error('[AI Response Error] Input data:', JSON.stringify(data, null, 2));
     throw error;
+  }
+}
+
+// Auto-correct common AI mistakes before validation
+function normalizeAIResponse(data: Record<string, unknown>): void {
+  // Fix distortion type confusion (tape/tube are saturation-only, not valid for distortion effect)
+  if (data.effects && typeof data.effects === 'object') {
+    const effects = data.effects as Record<string, unknown>;
+    if (effects.distortion && typeof effects.distortion === 'object') {
+      const distortion = effects.distortion as Record<string, unknown>;
+      if (distortion.type === 'tape' || distortion.type === 'tube') {
+        distortion.type = 'soft'; // Map to closest valid distortion type
+        console.warn('[AI Auto-correction] Changed distortion type from tape/tube to soft (tape/tube are saturation types)');
+      }
+    }
   }
 }
 

@@ -27,56 +27,56 @@ export const subOctaveEnum = z.enum(['-1', '-2']).transform(v => parseInt(v) as 
 
 export const BOUNDS = {
   envelope: {
-    attack: { min: 0.001, max: 5 },
-    decay: { min: 0.001, max: 5 },
-    sustain: { min: 0, max: 1 },
-    release: { min: 0.001, max: 10 },
+    attack: { min: 0.001, max: 5 },  // Attack timing: <0.002s=percussive/pluck, 0.002-0.01s=piano/mallet, 0.01-0.05s=soft strike, 0.05-0.2s=bowed/blown, 0.2-1s+=swells. Typical: 0.005-0.02s
+    decay: { min: 0.001, max: 5 },  // Peak to sustain time: 0.01-0.1s=tight, 0.1-0.5s=snappy, 0.5-2s=moderate, 2-5s=long. For sustain=0 sounds, this IS the body length
+    sustain: { min: 0, max: 1 },  // Held level: 0=one-shot/percussive/plucks, 0.1-0.3=gentle fade, 0.5-0.8=sustained notes, 0.9-1.0=organs/drones
+    release: { min: 0.001, max: 10 },  // Fadeout after note off: 0.01-0.1s=tight, 0.1-0.5s=natural, 0.5-2s=long tail, 2-10s=extreme ambient
   },
   oscillator: {
     frequency: { min: 20, max: 20000 },
     detune: { min: -1200, max: 1200 },
   },
   unison: {
-    voices: { min: 1, max: 8 },
-    detune: { min: 0, max: 100 },  // cents per voice
-    spread: { min: 0, max: 1 },  // Stereo width: 0 = mono/center, 1 = full stereo spread
+    voices: { min: 1, max: 8 },  // 1=mono, 2-3=subtle thickness, 4-6=supersaw, 7-8=extreme. Typical: 2-3
+    detune: { min: 0, max: 100 },  // Cents per voice: 0=unison, 5-15=subtle, 20-40=obvious, 50-100=extreme detuning. Typical: 10-20
+    spread: { min: 0, max: 1 },  // Stereo width: 0=mono/center, 0.2-0.4=subtle, 0.5-0.8=wide, 1.0=extreme
   },
   sub: {
     level: { min: 0, max: 1 },
   },
   filter: {
-    frequency: { min: 20, max: 20000 },  // Cutoff frequency in Hz
-    q: { min: 0.1, max: 100 },  // Resonance: 0.1-1 = gentle, 1-5 = resonant peak, 5-10 = self-oscillation, 10+ = extreme
-    envelopeAmount: { min: -10000, max: 10000 },  // Hz offset from base frequency over envelope
+    frequency: { min: 20, max: 20000 },  // Cutoff frequency: 20-80Hz=sub, 80-250Hz=bass, 250-2000Hz=mids, 2000-6000Hz=presence, 6000-12000Hz=air, 12000+=extreme highs
+    q: { min: 0.1, max: 100 },  // Resonance: 0.1-0.7=gentle/natural, 0.7-1.5=standard synth, 2-5=resonant peak/acid, 5-10=self-oscillating, 10-100=extreme. Typical: 0.5-2.0
+    envelopeAmount: { min: -10000, max: 10000 },  // Hz to sweep: ±500-1500=subtle, ±2000-4000=classic synth, ±5000-10000=dramatic. Negative=sweep down (bright→dark)
   },
   saturation: {
-    drive: { min: 0, max: 1 },  // Saturation amount: 0 = clean, 1 = heavily saturated
-    mix: { min: 0, max: 1 },  // Dry/wet blend: 0 = clean, 1 = fully saturated
+    drive: { min: 0, max: 1 },  // 0-0.1=subtle warmth, 0.1-0.3=gentle coloration, 0.3-0.5=obvious saturation, 0.5-0.8=heavy, 0.8-1.0=extreme clipping. Per-layer only.
+    mix: { min: 0, max: 1 },  // Dry/wet: 0.1-0.3=parallel (keeps dynamics), 0.5-0.7=balanced, 0.8-1.0=full saturation
   },
   fm: {
-    ratio: { min: 0.5, max: 16 },  // Frequency multiplier relative to base pitch
-    modulationIndex: { min: 0, max: 1 },  // FM modulation depth: 0-1 (Hz deviation = value × carrierFreqHz)
-    feedback: { min: 0, max: 1 },  // Self-modulation amount (0=none, 0.3=metallic, 0.7+=harsh)
+    ratio: { min: 0.5, max: 16 },  // Frequency multiplier: 1=fundamental, 2/3/4=harmonic overtones, non-integer=inharmonic/metallic, <1=sub-harmonic
+    modulationIndex: { min: 0, max: 1 },  // FM depth: 0.01-0.05=subtle/warm EP, 0.1-0.3=moderate/DX7, 0.4-0.7=strong/brass, 0.8-1.0=extreme/harsh (Hz deviation = value × carrierFreqHz)
+    feedback: { min: 0, max: 1 },  // Self-modulation: 0=clean, 0.1-0.3=subtle edge, 0.3-0.5=metallic/brass, 0.6-0.9=harsh/aggressive, 0.9+=chaotic
   },
   karplus: {
     frequency: { min: 20, max: 2000 },
-    damping: { min: 0, max: 1 },  // 0 = long sustain/ring, 1 = short pluck/decay
-    inharmonicity: { min: 0, max: 1 },  // Stretches higher partials: 0 = pure/plucked string, 0.3-0.5 = piano-like, 1 = bell-like
+    damping: { min: 0, max: 1 },  // Decay rate: 0-0.1=infinite ring/bell, 0.1-0.3=long decay/piano, 0.3-0.5=medium/guitar, 0.5-0.7=short, 0.7-0.9=fast pluck, 0.9-1.0=immediate
+    inharmonicity: { min: 0, max: 1 },  // Harmonic stretch: 0=pure/synthetic, 0.1-0.2=guitar, 0.3-0.5=piano, 0.5-0.7=high piano/vibes, 0.7-0.9=glockenspiel, 0.9-1.0=bells. WARNING: Creates instant pluck transient - sounds like harp/harpsichord even with slow layer envelope
   },
   lfo: {
-    frequency: { min: 0.01, max: 20 },  // LFO rate in Hz
-    depth: { min: 0, max: 1 },  // Modulation amount (target-dependent: pitch=cents*100, filter=freq multiplier, amplitude/pan=direct)
-    delay: { min: 0, max: 10 },  // Seconds before LFO starts
-    fade: { min: 0, max: 10 },  // Seconds to fade in LFO after delay
+    frequency: { min: 0.01, max: 20 },  // Rate: 0.1-0.5Hz=slow sweep, 0.5-2Hz=slow mod, 2-6Hz=musical vibrato, 6-12Hz=fast tremolo, 12-20Hz=extreme. Typical: 2-6Hz
+    depth: { min: 0, max: 1 },  // Intensity: pitch=0.02-0.05 subtle vibrato, 0.1+=obvious; filter=0.3-0.7; amplitude/pan=0.3-0.6. Target-dependent scaling
+    delay: { min: 0, max: 10 },  // Seconds before LFO starts (0=immediate, 0.5-2s=expressive delay)
+    fade: { min: 0, max: 10 },  // Fade-in time after delay (0=instant, 0.5-2s=gradual)
   },
   distortion: {
     amount: { min: 0, max: 1 },  // Distortion intensity
     mix: { min: 0, max: 1 },  // Dry/wet blend: 0 = clean, 1 = fully distorted
   },
   reverb: {
-    decay: { min: 0.1, max: 5 },  // Reverb tail length in seconds (capped at 5s for performance)
-    damping: { min: 0, max: 1 },  // High frequency absorption: 0 = bright/reflective, 1 = dark/absorptive
-    mix: { min: 0, max: 1 },  // Dry/wet blend: 0 = dry only, 1 = wet only
+    decay: { min: 0.1, max: 5 },  // Room size: 0.1-0.5s=small room, 0.5-1.5s=medium/studio, 1.5-3s=large hall, 3-5s=cathedral. Typical: 1-2s
+    damping: { min: 0, max: 1 },  // Surface absorption: 0-0.3=hard/bright (tile), 0.3-0.6=natural (wood), 0.6-0.9=soft/dark (carpet). Typical: 0.4-0.6
+    mix: { min: 0, max: 1 },  // Amount: 0.05-0.15=subtle ambience, 0.15-0.3=present, 0.3-0.5=obvious, 0.5+=washy/distant. Typical: 0.2-0.3
   },
   delay: {
     time: { min: 0.01, max: 2 },  // Delay time in seconds
@@ -84,11 +84,11 @@ export const BOUNDS = {
     mix: { min: 0, max: 1 },  // Dry/wet blend
   },
   compressor: {
-    threshold: { min: -60, max: 0 },  // dB level where compression starts
-    ratio: { min: 1, max: 20 },  // Compression ratio: 1 = no compression, 20 = extreme limiting
-    attack: { min: 0, max: 1 },  // Seconds: how quickly compression engages
-    release: { min: 0, max: 1 },  // Seconds: how quickly compression disengages
-    knee: { min: 0, max: 40 },  // dB: 0 = hard knee (abrupt), 40 = soft knee (gradual)
+    threshold: { min: -60, max: 0 },  // Where compression starts: -60dB=always on, -30dB=moderate, -18 to -12dB=typical/peaks only, -6dB=subtle. Typical: -18dB
+    ratio: { min: 1, max: 20 },  // How much to compress: 1=none, 2-3=gentle, 4-6=moderate, 8-12=heavy, 20=limiting. Typical: 2.5-4
+    attack: { min: 0, max: 1 },  // Response speed: <0.01s=fast/dulls transients, 0.02-0.05s=preserves punch (typical), 0.1-0.5s=slow/pumping
+    release: { min: 0, max: 1 },  // Recovery speed: <0.1s=pumping/breathing, 0.15-0.3s=musical (typical), 0.5-1s=slow/smooth
+    knee: { min: 0, max: 40 },  // Compression onset: 0dB=hard/obvious, 10-20dB=moderate (typical), 30-40dB=soft/transparent
   },
   gate: {
     attack: { min: 0, max: 1 },  // Seconds: gate opening time
@@ -664,46 +664,50 @@ SCHEMA:
 export function generateParameterGuide(): string {
   const b = BOUNDS;
   return `
-LAYER TYPES:
-- oscillator: Generates periodic waveforms (sine, square, sawtooth, triangle)
+LAYER TYPES & CHARACTERISTICS:
+
+oscillator: Periodic waveforms. Best for synth sounds, basses, leads, pads
+  * Waveforms: sine=pure/soft/sub, triangle=warm/mellow, sawtooth=bright/rich (most versatile), square=hollow/video-game
   * frequency: ${range(b.oscillator.frequency, 'Hz')}
   * detune: ${range(b.oscillator.detune, 'cents')}
-  * unison: Multiple detuned voices (${range(b.unison.voices)} voices, detune ${range(b.unison.detune, 'cents')}, stereo spread ${range(b.unison.spread)})
-  * sub: Sub-oscillator ${range(b.sub.level)} level, 1 or 2 octaves below
-  * pitchEnvelope: ADSR envelope modulating pitch (amount ${range(b.pitchEnvelope.amount, 'cents')}, sustain ${range(b.pitchEnvelope.sustain)} = percentage of amount)
+  * unison: ${range(b.unison.voices)} voices (typical: 2-3), detune ${range(b.unison.detune, 'cents')} (typical: 10-20), spread ${range(b.unison.spread)} (typical: 0.2-0.4)
+  * sub: Level ${range(b.sub.level)} (bass: 0.4-0.6), 1-2 octaves below
+  * pitchEnvelope: Amount ${range(b.pitchEnvelope.amount, 'cents')}, sustain ${range(b.pitchEnvelope.sustain)}=percentage of amount
 
-- noise: Generates white, pink, or brown noise
+noise: white=hiss/air, pink=natural/wind, brown=rumble. Best for transients, breath, cymbals. ALWAYS filter (raw is harsh)
 
-- fm: FM synthesis operator
-  * ratio: ${range(b.fm.ratio)} - frequency multiplier relative to base pitch
-  * modulationIndex: ${range(b.fm.modulationIndex)} - FM depth where Hz deviation = value × carrierFreqHz
-  * feedback: ${range(b.fm.feedback)} - self-modulation (>0.3=metallic, >0.7=harsh)
-  * modulatesLayer: Optional index of another FM layer to modulate (this layer outputs to that layer's frequency, not audio)
-  * envelope: Optional ADSR to modulate FM depth over time
+fm: Frequency modulation. Best for electric pianos, bells, metallic tones
+  * ratio: ${range(b.fm.ratio)} (1=fundamental, 2/3/4=harmonic, non-integer=inharmonic/bells, <1=sub)
+  * modulationIndex: ${range(b.fm.modulationIndex)} (0.01-0.05=subtle EP, 0.1-0.3=DX7, 0.4-0.7=brass, 0.8-1.0=harsh)
+  * feedback: ${range(b.fm.feedback)} (0=clean, 0.1-0.3=edge, 0.3-0.5=metallic, 0.6-0.9=harsh, 0.9+=chaotic)
+  * modulatesLayer: Route to another FM layer (set this layer gain=0)
+  * envelope: Modulates FM depth over time
 
-- karplus-strong: Physical modeling for plucked/struck strings
+karplus-strong: Physical string model. Best for plucked strings, struck bars
+  * WARNING: Creates INSTANT pluck transient. Layer envelope can't soften it. Sounds like harp/harpsichord/mandolin
+  * NOT recommended for piano - use filtered oscillators with slow attack + filter sweep instead
   * frequency: ${range(b.karplus.frequency, 'Hz')}
-  * damping: ${range(b.karplus.damping)} (0=long sustain, 1=short pluck)
-  * inharmonicity: ${range(b.karplus.inharmonicity)} (0=pure/string, 0.3-0.5=piano, 1=bell)
+  * damping: ${range(b.karplus.damping)} (0-0.1=bell, 0.1-0.3=piano/bass, 0.3-0.5=guitar, 0.5-0.7=short, 0.7-0.9=pluck, 0.9-1.0=immediate)
+  * inharmonicity: ${range(b.karplus.inharmonicity)} (0=pure, 0.1-0.2=guitar, 0.3-0.5=piano, 0.7-0.9=glock, 0.9-1.0=bells)
 
 PER-LAYER PROCESSING:
-- gain: ${range(b.gain)}
-- envelope: Optional ADSR (attack ${range(b.envelope.attack, 's')}, decay ${range(b.envelope.decay, 's')}, sustain ${range(b.envelope.sustain)}, release ${range(b.envelope.release, 's')})
-- filter: Optional (${enumStr(filterTypeEnum)}) with frequency ${range(b.filter.frequency, 'Hz')}, Q ${range(b.filter.q)}
-- saturation: Optional (${enumStr(saturationTypeEnum)}) with drive ${range(b.saturation.drive)}, mix ${range(b.saturation.mix)}
+- gain: ${range(b.gain)}. Typical: primary=0.5-0.8, supporting=0.2-0.4, transients=0.05-0.15. Total all layers: ~0.8-1.2
+- envelope: Attack ${range(b.envelope.attack, 's')} (<0.002s=percussive, 0.005-0.02s=piano/mallet, 0.05-0.2s=bowed, 0.2s+=swell), decay ${range(b.envelope.decay, 's')} (for sustain=0 this IS body length), sustain ${range(b.envelope.sustain)} (0=one-shot, 0.5-1.0=held), release ${range(b.envelope.release, 's')}
+- filter: ${enumStr(filterTypeEnum)}. Frequency ${range(b.filter.frequency, 'Hz')}, Q ${range(b.filter.q)} (typical: 0.5-2.0). Envelope amount ${range(b.filter.envelopeAmount, 'Hz')} (±2000-4000 typical sweep)
+- saturation: ${enumStr(saturationTypeEnum)} (PER-LAYER only, subtle coloration). Drive ${range(b.saturation.drive)} (0.1-0.3 typical), mix ${range(b.saturation.mix)}
 
 GLOBAL PROCESSING:
-- envelope: Master ADSR (always applied)
-- filter: Optional (${enumStr(globalFilterTypeEnum)})
-- lfo: Optional (waveform ${enumStr(lfoWaveformEnum)}, frequency ${range(b.lfo.frequency, 'Hz')}, depth ${range(b.lfo.depth)}, target ${enumStr(lfoTargetEnum)})
+- envelope: Master ADSR (always applied, controls overall amplitude)
+- filter: ${enumStr(globalFilterTypeEnum)}. Same ranges as layer filter
+- lfo: Waveform ${enumStr(lfoWaveformEnum)}, frequency ${range(b.lfo.frequency, 'Hz')} (2-6Hz typical vibrato), depth ${range(b.lfo.depth)} (pitch: 0.02-0.05 typical), target ${enumStr(lfoTargetEnum)}
 
-EFFECTS (order: EQ → Distortion → Compressor → Chorus → Delay → Reverb → Gate):
-- distortion: type ${enumStr(distortionTypeEnum)}, amount ${range(b.distortion.amount)}, mix ${range(b.distortion.mix)}
-- compressor: threshold ${range(b.compressor.threshold, 'dB')}, ratio ${range(b.compressor.ratio)}
-- chorus: rate ${range(b.chorus.rate, 'Hz')}, depth ${range(b.chorus.depth)}, delay ${range(b.chorus.delay, 'ms')} (1-5=flanger, 20-50=chorus)
-- reverb: decay ${range(b.reverb.decay, 's')}, damping ${range(b.reverb.damping)} (0=bright, 1=dark)
+EFFECTS (order matters: EQ → Distortion → Compressor → Chorus → Delay → Reverb → Gate):
+- distortion: GLOBAL only. Type ${enumStr(distortionTypeEnum)} (NOT tape/tube - those are saturation), amount ${range(b.distortion.amount)}, mix ${range(b.distortion.mix)}
+- compressor: threshold ${range(b.compressor.threshold, 'dB')} (typical: -18dB), ratio ${range(b.compressor.ratio)} (typical: 2.5-4)
+- chorus: rate ${range(b.chorus.rate, 'Hz')}, depth ${range(b.chorus.depth)} (0.1-0.3 typical), delay ${range(b.chorus.delay, 'ms')} (1-5=flanger, 20-50=chorus)
+- reverb: decay ${range(b.reverb.decay, 's')} (1-2s typical), damping ${range(b.reverb.damping)} (0.4-0.6 typical), mix ${range(b.reverb.mix)} (0.2-0.3 typical)
 - delay: time ${range(b.delay.time, 's')}, feedback ${range(b.delay.feedback)}
-- eq: 3-band with gain ${range(b.eq.gain, 'dB')} per band
-- gate: attack ${range(b.gate.attack, 's')}, hold ${range(b.gate.hold, 's')}, release ${range(b.gate.release, 's')}
+- eq: 3-band, gain ${range(b.eq.gain, 'dB')} per band
+- gate: For gated reverb effects (80s snare)
 `.trim();
 }
