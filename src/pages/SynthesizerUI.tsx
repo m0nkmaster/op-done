@@ -1223,6 +1223,7 @@ export function SynthesizerUI() {
       // Set flag to prevent auto-switch to "Custom"
       isUpdatingFromJSON.current = true;
       setConfig(presetConfig);
+      setJsonValue(JSON.stringify(presetConfig, null, 2));
       setTimeout(() => { isUpdatingFromJSON.current = false; }, 100);
       
       setError(null);
