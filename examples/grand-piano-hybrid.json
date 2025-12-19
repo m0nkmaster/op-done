@@ -91,7 +91,7 @@
         },
         "saturation": {
           "type": "soft",
-          "drive": 1.5,
+          "drive": 0.15,
           "mix": 0.2
         }
       }

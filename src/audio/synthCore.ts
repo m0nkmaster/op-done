@@ -169,7 +169,7 @@ export function createFMLayer(
   duration?: number
 ): FMLayerResult {
   const safeRatio = safe(config.ratio, 1);
-  const safeModIndex = safe(config.modulationIndex, 10);
+  const safeModIndex = safe(config.modulationIndex, 0.1);
   const safeFeedback = safe(config.feedback, 0);
   const safeFreq = safe(frequency, 440);
   const waveform = config.waveform || 'sine';
@@ -187,9 +187,8 @@ export function createFMLayer(
   // Modulation output: this is what gets routed to other FM layers
   // The modulation depth is scaled by modulationIndex and operator frequency
   // FM formula: Δf = modulationIndex × modulatorFreq
-  // CRITICAL: Divide by 100 for gentle modulation (modIndex 10 = ~4.4Hz deviation @ 440Hz)
   const modulationOutput = ctx.createGain();
-  modulationOutput.gain.value = (safeModIndex / 100) * operatorFreq;
+  modulationOutput.gain.value = safeModIndex * operatorFreq;
   carrier.connect(modulationOutput);
   
   // Apply per-operator envelope to modulation depth (critical for FM timbres)
@@ -200,8 +199,7 @@ export function createFMLayer(
     const safeDecay = Math.max(0.001, env.decay);
     const safeRelease = Math.max(0.001, env.release);
     // Ensure peakGain is never 0 (exponentialRamp can't target 0)
-    // Match the /100 scaling from above
-    const peakGain = Math.max(SILENCE, (safeModIndex / 100) * operatorFreq);
+    const peakGain = Math.max(SILENCE, safeModIndex * operatorFreq);
     const sustainGain = Math.max(SILENCE, env.sustain * peakGain);
     const releaseStart = Math.max(safeAttack + safeDecay + 0.01, duration - safeRelease);
     
@@ -394,7 +392,7 @@ export function createSaturation(
   const shaper = ctx.createWaveShaper();
   const curveSize = 256;
   const curve = new Float32Array(curveSize);
-  const drive = Math.max(BOUNDS.saturation.drive.min, Math.min(BOUNDS.saturation.drive.max, config.drive));
+  const drive = Math.max(BOUNDS.saturation.drive.min, Math.min(BOUNDS.saturation.drive.max, config.drive)) * 10;
   const mix = Math.max(BOUNDS.saturation.mix.min, Math.min(BOUNDS.saturation.mix.max, config.mix));
   
   for (let i = 0; i < curveSize; i++) {
@@ -641,7 +639,7 @@ export function applyPitchEnvelope(
   
   // Convert cents to frequency multiplier: 1200 cents = 1 octave = 2x frequency
   const peakMultiplier = Math.pow(2, amount / 1200);
-  const sustainMultiplier = Math.pow(2, sustain / 1200);
+  const sustainMultiplier = Math.pow(2, (sustain * amount) / 1200);
   
   const peakFreq = Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, baseFrequency * peakMultiplier));
   const sustainFreq = Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, baseFrequency * sustainMultiplier));
@@ -678,7 +676,7 @@ export function applyPitchEnvelopeRealtime(
   const { amount, attack, decay, sustain } = envelope;
   
   const peakMultiplier = Math.pow(2, amount / 1200);
-  const sustainMultiplier = Math.pow(2, sustain / 1200);
+  const sustainMultiplier = Math.pow(2, (sustain * amount) / 1200);
   
   const peakFreq = Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, baseFrequency * peakMultiplier));
   const sustainFreq = Math.max(BOUNDS.oscillator.frequency.min, Math.min(BOUNDS.oscillator.frequency.max, baseFrequency * sustainMultiplier));

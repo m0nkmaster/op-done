@@ -24,7 +24,7 @@
           },
           "saturation": {
             "type": "soft",
-            "drive": 1,
+            "drive": 0.1,
             "mix": 0.1
           },
           "fm": {
@@ -69,7 +69,7 @@
           "fm": {
             "ratio": 1,
             "waveform": "sine",
-            "modulationIndex": 22,
+            "modulationIndex": 0.22,
             "feedback": 0.1,
             "modulatesLayer": 0,
             "envelope": {
@@ -103,7 +103,7 @@
           },
           "saturation": {
             "type": "tube",
-            "drive": 2,
+            "drive": 0.2,
             "mix": 0.1
           },
           "fm": {

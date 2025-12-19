@@ -49,7 +49,7 @@
         },
         "saturation": {
           "type": "tube",
-          "drive": 1.5,
+          "drive": 0.15,
           "mix": 0.3
         }
       },

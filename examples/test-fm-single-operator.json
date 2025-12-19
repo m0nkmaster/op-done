@@ -13,7 +13,7 @@
         "fm": {
           "ratio": 1,
           "waveform": "sine",
-          "modulationIndex": 5,
+          "modulationIndex": 0.05,
           "feedback": 0.1
         }
       }

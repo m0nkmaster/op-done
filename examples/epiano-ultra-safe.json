@@ -23,7 +23,7 @@
         "fm": {
           "ratio": 1,
           "waveform": "sine",
-          "modulationIndex": 0.8,
+          "modulationIndex": 0.008,
           "feedback": 0,
           "modulatesLayer": 0,
           "envelope": {

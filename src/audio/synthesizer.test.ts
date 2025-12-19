@@ -65,22 +65,7 @@ describe('synthesizeSound', () => {
         layers: [{
           type: 'fm',
           gain: 0.7,
-          fm: { ratio: 2, waveform: 'sine', modulationIndex: 30, feedback: 0 }
-        }]
-      }
-    };
-    const buffer = await synthesizeSound(config);
-    expect(buffer.length).toBeGreaterThan(0);
-  });
-
-  it('should synthesize FM with legacy carrier/modulator format (migration)', async () => {
-    const config: SoundConfig = {
-      ...baseConfig,
-      synthesis: {
-        layers: [{
-          type: 'fm',
-          gain: 0.7,
-          fm: { carrier: 200, modulator: 400, modulationIndex: 30 }
+          fm: { ratio: 2, waveform: 'sine', modulationIndex: 0.3, feedback: 0 }
         }]
       }
     };
@@ -95,7 +80,7 @@ describe('synthesizeSound', () => {
         layers: [{
           type: 'fm',
           gain: 0.7,
-          fm: { ratio: 1, waveform: 'sine', modulationIndex: 20, feedback: 0.5 }
+          fm: { ratio: 1, waveform: 'sine', modulationIndex: 0.2, feedback: 0.5 }
         }]
       }
     };
@@ -113,7 +98,7 @@ describe('synthesizeSound', () => {
           fm: { 
             ratio: 2, 
             waveform: 'sine', 
-            modulationIndex: 40, 
+            modulationIndex: 0.4, 
             feedback: 0,
             envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.1 }
           }
@@ -138,11 +123,11 @@ describe('synthesizeSound', () => {
             q: 1,
             envelope: { amount: -1500, attack: 0.001, decay: 1, sustain: 0, release: 0.1 }
           },
-          saturation: { type: 'tube', drive: 2, mix: 0.2 },
+          saturation: { type: 'tube', drive: 0.2, mix: 0.2 },
           fm: {
             ratio: 1,
             waveform: 'sine',
-            modulationIndex: 12,
+            modulationIndex: 0.12,
             feedback: 0.1,
             envelope: { attack: 0.001, decay: 0.6, sustain: 0, release: 0.1 }
           }
@@ -162,12 +147,12 @@ describe('synthesizeSound', () => {
           {
             type: 'fm',
             gain: 0.7,
-            fm: { ratio: 3, waveform: 'sine', modulationIndex: 50, feedback: 0, modulatesLayer: 1 }
+            fm: { ratio: 3, waveform: 'sine', modulationIndex: 0.5, feedback: 0, modulatesLayer: 1 }
           },
           {
             type: 'fm',
             gain: 0.7,
-            fm: { ratio: 1, waveform: 'sine', modulationIndex: 10, feedback: 0 }
+            fm: { ratio: 1, waveform: 'sine', modulationIndex: 0.1, feedback: 0 }
           }
         ]
       }
@@ -527,7 +512,7 @@ describe('Property-Based Tests', () => {
                   fm: fc.record({
                     ratio: validFloat(0.5, 16),
                     waveform: fc.constantFrom('sine', 'square', 'sawtooth', 'triangle'),
-                    modulationIndex: validFloat(0, 100),
+                    modulationIndex: validFloat(0, 1),
                     feedback: validFloat(0, 1),
                   }),
                 }),

@@ -46,16 +46,16 @@ export const BOUNDS = {
   },
   filter: {
     frequency: { min: 20, max: 20000 },  // Cutoff frequency in Hz
-    q: { min: 0.0001, max: 100 },  // Resonance: 0.7 = flat, 1-5 = resonant peak, 10+ = self-oscillation
+    q: { min: 0.1, max: 100 },  // Resonance: 0.1-1 = gentle, 1-5 = resonant peak, 5-10 = self-oscillation, 10+ = extreme
     envelopeAmount: { min: -10000, max: 10000 },  // Hz offset from base frequency over envelope
   },
   saturation: {
-    drive: { min: 0, max: 10 },  // Saturation amount: 0 = clean, 10 = heavily saturated
+    drive: { min: 0, max: 1 },  // Saturation amount: 0 = clean, 1 = heavily saturated
     mix: { min: 0, max: 1 },  // Dry/wet blend: 0 = clean, 1 = fully saturated
   },
   fm: {
     ratio: { min: 0.5, max: 16 },  // Frequency multiplier relative to base pitch
-    modulationIndex: { min: 0, max: 100 },  // FM modulation depth. Actual Hz deviation = (value/100) × carrierFreqHz. Example: 100 @ 440Hz = 440Hz deviation
+    modulationIndex: { min: 0, max: 1 },  // FM modulation depth: 0-1 (Hz deviation = value × carrierFreqHz)
     feedback: { min: 0, max: 1 },  // Self-modulation amount (0=none, 0.3=metallic, 0.7+=harsh)
   },
   karplus: {
@@ -99,7 +99,7 @@ export const BOUNDS = {
     amount: { min: -4800, max: 4800 },  // cents (±4 octaves)
     attack: { min: 0, max: 2 },
     decay: { min: 0.001, max: 5 },
-    sustain: { min: -4800, max: 4800 },  // cents (sustain deviation)
+    sustain: { min: 0, max: 1 },  // Sustain level (percentage of amount)
     release: { min: 0.001, max: 5 },
   },
   chorus: {
@@ -166,8 +166,24 @@ const pitchEnvelopeSchema = z.object({
   amount: z.number().min(BOUNDS.pitchEnvelope.amount.min).max(BOUNDS.pitchEnvelope.amount.max),
   attack: clampedEnvelopeTime(BOUNDS.pitchEnvelope.attack.min, BOUNDS.pitchEnvelope.attack.max),
   decay: clampedEnvelopeTime(BOUNDS.pitchEnvelope.decay.min, BOUNDS.pitchEnvelope.decay.max),
-  sustain: z.number().min(BOUNDS.pitchEnvelope.sustain.min).max(BOUNDS.pitchEnvelope.sustain.max),
+  sustain: z.number(),
   release: clampedEnvelopeTime(BOUNDS.pitchEnvelope.release.min, BOUNDS.pitchEnvelope.release.max),
+}).transform(env => {
+  // Migration: Convert old cent-based sustain to percentage-based
+  // Old format: sustain was absolute cents
+  // New format: sustain is percentage of amount (0-1)
+  // If sustain > 1, assume it's old format and convert: sustainLevel = sustainCents / amount
+  if (env.sustain > 1 && env.amount !== 0) {
+    return {
+      ...env,
+      sustain: Math.max(0, Math.min(1, env.sustain / Math.abs(env.amount))),
+    };
+  }
+  // Clamp to valid range
+  return {
+    ...env,
+    sustain: Math.max(BOUNDS.pitchEnvelope.sustain.min, Math.min(BOUNDS.pitchEnvelope.sustain.max, env.sustain)),
+  };
 });
 
 const oscillatorConfigSchema = z.object({
@@ -191,31 +207,14 @@ const fmEnvelopeSchema = z.object({
   release: clampedEnvelopeTime(BOUNDS.envelope.release.min, BOUNDS.envelope.release.max),
 });
 
-// FM config with migration support for old carrier/modulator format
-const fmConfigSchema = z.union([
-  // New format: ratio-based
-  z.object({
-    ratio: z.number().min(BOUNDS.fm.ratio.min).max(BOUNDS.fm.ratio.max),
-    waveform: waveformEnum.default('sine'),
-    modulationIndex: z.number().min(BOUNDS.fm.modulationIndex.min).max(BOUNDS.fm.modulationIndex.max),
-    feedback: z.number().min(BOUNDS.fm.feedback.min).max(BOUNDS.fm.feedback.max).default(0),
-    modulatesLayer: z.number().int().min(0).optional(),  // Index of layer to modulate (undefined = output)
-    envelope: fmEnvelopeSchema.optional(),
-  }),
-  // Legacy format: carrier/modulator frequencies (auto-migrated to ratio)
-  z.object({
-    carrier: z.number().min(20).max(20000),
-    modulator: z.number().min(20).max(20000),
-    modulationIndex: z.number().min(BOUNDS.fm.modulationIndex.min).max(BOUNDS.fm.modulationIndex.max),
-  }).transform(legacy => ({
-    ratio: legacy.carrier > 0 ? legacy.modulator / legacy.carrier : 1,
-    waveform: 'sine' as const,
-    modulationIndex: legacy.modulationIndex,
-    feedback: 0,
-    modulatesLayer: undefined,
-    envelope: undefined,
-  })),
-]);
+const fmConfigSchema = z.object({
+  ratio: z.number().min(BOUNDS.fm.ratio.min).max(BOUNDS.fm.ratio.max),
+  waveform: waveformEnum.default('sine'),
+  modulationIndex: z.number().min(BOUNDS.fm.modulationIndex.min).max(BOUNDS.fm.modulationIndex.max),
+  feedback: z.number().min(BOUNDS.fm.feedback.min).max(BOUNDS.fm.feedback.max).default(0),
+  modulatesLayer: z.number().int().min(0).optional(),  // Index of layer to modulate (undefined = output)
+  envelope: fmEnvelopeSchema.optional(),
+});
 
 const karplusConfigSchema = z.object({
   frequency: z.number().min(BOUNDS.karplus.frequency.min).max(BOUNDS.karplus.frequency.max),
@@ -572,9 +571,9 @@ SCHEMA:
         "detune": number ${range(b.oscillator.detune, 'cents')},
         "unison": { "voices": number ${range(b.unison.voices)}, "detune": number ${range(b.unison.detune, 'cents')}, "spread": number ${range(b.unison.spread)} },
         "sub": { "level": number ${range(b.sub.level)}, "octave": -1 | -2, "waveform": "sine"|"square"|"triangle" },
-        "pitchEnvelope": { "amount": number ${range(b.pitchEnvelope.amount, 'cents')}, "attack": number ${range(b.pitchEnvelope.attack, 's')}, "decay": number ${range(b.pitchEnvelope.decay, 's')}, "sustain": number ${range(b.pitchEnvelope.sustain, 'cents')}, "release": number ${range(b.pitchEnvelope.release, 's')} }
+        "pitchEnvelope": { "amount": number ${range(b.pitchEnvelope.amount, 'cents')}, "attack": number ${range(b.pitchEnvelope.attack, 's')}, "decay": number ${range(b.pitchEnvelope.decay, 's')}, "sustain": number ${range(b.pitchEnvelope.sustain)} (percentage of amount), "release": number ${range(b.pitchEnvelope.release, 's')} }
       },
-      "fm": { "ratio": number ${range(b.fm.ratio)} (frequency multiplier relative to base pitch), "waveform": ${enumStr(waveformEnum)}, "modulationIndex": number ${range(b.fm.modulationIndex)} (FM depth: Hz deviation = value/100 × carrierFreqHz), "feedback": number ${range(b.fm.feedback)} (self-modulation: 0=none, >0.3=metallic, >0.7=harsh), "modulatesLayer": number (optional: index of FM layer to modulate; when set, this layer's output routes to target layer's frequency input instead of audio output), "envelope": { "attack": number, "decay": number, "sustain": number, "release": number } (optional: modulates FM depth over time) },
+      "fm": { "ratio": number ${range(b.fm.ratio)} (frequency multiplier relative to base pitch), "waveform": ${enumStr(waveformEnum)}, "modulationIndex": number ${range(b.fm.modulationIndex)} (FM depth: Hz deviation = value × carrierFreqHz), "feedback": number ${range(b.fm.feedback)} (self-modulation: 0=none, >0.3=metallic, >0.7=harsh), "modulatesLayer": number (optional: index of FM layer to modulate; when set, this layer's output routes to target layer's frequency input instead of audio output), "envelope": { "attack": number, "decay": number, "sustain": number, "release": number } (optional: modulates FM depth over time) },
       "noise": { "type": ${enumStr(noiseTypeEnum)} },
       "karplus": { "frequency": number ${range(b.karplus.frequency, 'Hz')}, "damping": number ${range(b.karplus.damping)} (0=long sustain, 1=short pluck), "inharmonicity": number ${range(b.karplus.inharmonicity)} (0=pure/plucked, 0.3-0.5=piano, 1=bell) }
     }]
@@ -630,8 +629,8 @@ SCHEMA:
       "envelope": { "attack": number ${range(b.envelope.attack, 's')}, "decay": number ${range(b.envelope.decay, 's')}, "sustain": number ${range(b.envelope.sustain)}, "release": number ${range(b.envelope.release, 's')} },
       "filter": { "type": ${enumStr(filterTypeEnum)}, "frequency": number ${range(b.filter.frequency, 'Hz')}, "q": number ${range(b.filter.q)}, "envelope": { "amount": number ${range(b.filter.envelopeAmount, 'Hz')}, "attack": number, "decay": number, "sustain": number, "release": number } },
       "saturation": { "type": ${enumStr(saturationTypeEnum)}, "drive": number ${range(b.saturation.drive)}, "mix": number ${range(b.saturation.mix)} },
-      "oscillator": { "waveform": ${enumStr(waveformEnum)}, "frequency": number ${range(b.oscillator.frequency, 'Hz')}, "detune": number ${range(b.oscillator.detune, 'cents')}, "pitchEnvelope": { "amount": number ${range(b.pitchEnvelope.amount, 'cents')}, "attack": number, "decay": number, "sustain": number (cents), "release": number } },
-      "fm": { "ratio": number ${range(b.fm.ratio)} (frequency multiplier relative to base pitch), "waveform": ${enumStr(waveformEnum)}, "modulationIndex": number ${range(b.fm.modulationIndex)} (FM depth: Hz deviation = value/100 × carrierFreqHz), "feedback": number ${range(b.fm.feedback)} (self-modulation: 0=none, >0.3=metallic, >0.7=harsh), "modulatesLayer": number (optional: routes modulation to target FM layer instead of audio output), "envelope": { attack, decay, sustain, release } (optional: modulates FM depth over time) },
+      "oscillator": { "waveform": ${enumStr(waveformEnum)}, "frequency": number ${range(b.oscillator.frequency, 'Hz')}, "detune": number ${range(b.oscillator.detune, 'cents')}, "pitchEnvelope": { "amount": number ${range(b.pitchEnvelope.amount, 'cents')}, "attack": number, "decay": number, "sustain": number ${range(b.pitchEnvelope.sustain)} (percentage of amount), "release": number } },
+      "fm": { "ratio": number ${range(b.fm.ratio)} (frequency multiplier relative to base pitch), "waveform": ${enumStr(waveformEnum)}, "modulationIndex": number ${range(b.fm.modulationIndex)} (FM depth: Hz deviation = value × carrierFreqHz), "feedback": number ${range(b.fm.feedback)} (self-modulation: 0=none, >0.3=metallic, >0.7=harsh), "modulatesLayer": number (optional: routes modulation to target FM layer instead of audio output), "envelope": { attack, decay, sustain, release } (optional: modulates FM depth over time) },
       "noise": { "type": ${enumStr(noiseTypeEnum)} },
       "karplus": { "frequency": number ${range(b.karplus.frequency, 'Hz')}, "damping": number ${range(b.karplus.damping)} (0=long sustain, 1=short pluck), "inharmonicity": number ${range(b.karplus.inharmonicity)} (0=pure/plucked, 0.3-0.5=piano, 1=bell) }
     }]
@@ -648,4 +647,55 @@ SCHEMA:
   "dynamics": { "velocity": number ${range(b.dynamics.velocity)}, "normalize": boolean },
   "metadata": { "name": string, "category": ${enumStr(categoryEnum)}, "description": string, "tags": string[] }
 }`;
+}
+
+/**
+ * Generate human-readable parameter descriptions for AI prompts
+ * Auto-generated from BOUNDS to prevent documentation drift
+ */
+export function generateParameterGuide(): string {
+  const b = BOUNDS;
+  return `
+LAYER TYPES:
+- oscillator: Generates periodic waveforms (sine, square, sawtooth, triangle)
+  * frequency: ${range(b.oscillator.frequency, 'Hz')}
+  * detune: ${range(b.oscillator.detune, 'cents')}
+  * unison: Multiple detuned voices (${range(b.unison.voices)} voices, detune ${range(b.unison.detune, 'cents')}, stereo spread ${range(b.unison.spread)})
+  * sub: Sub-oscillator ${range(b.sub.level)} level, 1 or 2 octaves below
+  * pitchEnvelope: ADSR envelope modulating pitch (amount ${range(b.pitchEnvelope.amount, 'cents')}, sustain ${range(b.pitchEnvelope.sustain)} = percentage of amount)
+
+- noise: Generates white, pink, or brown noise
+
+- fm: FM synthesis operator
+  * ratio: ${range(b.fm.ratio)} - frequency multiplier relative to base pitch
+  * modulationIndex: ${range(b.fm.modulationIndex)} - FM depth where Hz deviation = value × carrierFreqHz
+  * feedback: ${range(b.fm.feedback)} - self-modulation (>0.3=metallic, >0.7=harsh)
+  * modulatesLayer: Optional index of another FM layer to modulate (this layer outputs to that layer's frequency, not audio)
+  * envelope: Optional ADSR to modulate FM depth over time
+
+- karplus-strong: Physical modeling for plucked/struck strings
+  * frequency: ${range(b.karplus.frequency, 'Hz')}
+  * damping: ${range(b.karplus.damping)} (0=long sustain, 1=short pluck)
+  * inharmonicity: ${range(b.karplus.inharmonicity)} (0=pure/string, 0.3-0.5=piano, 1=bell)
+
+PER-LAYER PROCESSING:
+- gain: ${range(b.gain)}
+- envelope: Optional ADSR (attack ${range(b.envelope.attack, 's')}, decay ${range(b.envelope.decay, 's')}, sustain ${range(b.envelope.sustain)}, release ${range(b.envelope.release, 's')})
+- filter: Optional (${enumStr(filterTypeEnum)}) with frequency ${range(b.filter.frequency, 'Hz')}, Q ${range(b.filter.q)}
+- saturation: Optional (${enumStr(saturationTypeEnum)}) with drive ${range(b.saturation.drive)}, mix ${range(b.saturation.mix)}
+
+GLOBAL PROCESSING:
+- envelope: Master ADSR (always applied)
+- filter: Optional (${enumStr(globalFilterTypeEnum)})
+- lfo: Optional (waveform ${enumStr(lfoWaveformEnum)}, frequency ${range(b.lfo.frequency, 'Hz')}, depth ${range(b.lfo.depth)}, target ${enumStr(lfoTargetEnum)})
+
+EFFECTS (order: EQ → Distortion → Compressor → Chorus → Delay → Reverb → Gate):
+- distortion: type ${enumStr(distortionTypeEnum)}, amount ${range(b.distortion.amount)}, mix ${range(b.distortion.mix)}
+- compressor: threshold ${range(b.compressor.threshold, 'dB')}, ratio ${range(b.compressor.ratio)}
+- chorus: rate ${range(b.chorus.rate, 'Hz')}, depth ${range(b.chorus.depth)}, delay ${range(b.chorus.delay, 'ms')} (1-5=flanger, 20-50=chorus)
+- reverb: decay ${range(b.reverb.decay, 's')}, damping ${range(b.reverb.damping)} (0=bright, 1=dark)
+- delay: time ${range(b.delay.time, 's')}, feedback ${range(b.delay.feedback)}
+- eq: 3-band with gain ${range(b.eq.gain, 'dB')} per band
+- gate: attack ${range(b.gate.attack, 's')}, hold ${range(b.gate.hold, 's')}, release ${range(b.gate.release, 's')}
+`.trim();
 }

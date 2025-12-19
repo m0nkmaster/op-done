@@ -1,48 +1,19 @@
 import type { SoundConfig } from '../types/soundConfig';
-import { generateSchemaPrompt, generateBatchSchemaPrompt, coerceSoundConfig } from '../types/soundConfig';
+import { generateSchemaPrompt, generateBatchSchemaPrompt, generateParameterGuide, coerceSoundConfig } from '../types/soundConfig';
 import { AI } from '../config';
 
 export type AIProvider = 'openai' | 'gemini' | 'anthropic';
 
 // System prompt for general synthesis (/synthesizer page)
+// Note: Parameter descriptions are auto-generated from BOUNDS to prevent documentation drift
 const SYSTEM_PROMPT = `You are a sound synthesis expert. Generate JSON configurations for a multi-layer synthesizer.
 
 SYNTHESIZER ARCHITECTURE:
 Multi-layer additive/subtractive/FM/physical modeling synthesizer. Supports 1-8 layers per sound.
 
-LAYER TYPES:
-- oscillator: Generates periodic waveforms (sine, square, sawtooth, triangle). Features:
-  * unison: Multiple detuned voices (1-8 voices, detune in cents, stereo spread 0-1)
-  * sub: Sub-oscillator 1 or 2 octaves below (level 0-1, waveform sine/square/triangle)
-  * pitchEnvelope: ADSR envelope modulating pitch in cents (±4800 cents = ±4 octaves)
+${generateParameterGuide()}
 
-- noise: Generates white, pink, or brown noise for transients and textures.
-
-- fm: FM synthesis operator. Technical details:
-  * ratio: Frequency multiplier relative to base pitch (0.5-16)
-  * modulationIndex: FM depth where Hz deviation = (value/100) × carrierFreqHz. Example: value=100 @ 440Hz = 440Hz deviation
-  * feedback: Self-modulation amount (0-1). Values >0.3 produce metallic tones, >0.7 harsh/noisy tones
-  * modulatesLayer: Optional. When set to another FM layer's index, routes modulation to that layer's frequency input instead of audio output. Layers with modulatesLayer set should have gain=0
-  * envelope: Optional ADSR envelope modulating FM depth over time
-
-- karplus-strong: Physical modeling for plucked/struck strings. Technical details:
-  * frequency: Base frequency in Hz (20-2000)
-  * damping: Decay rate (0=long sustain/ring, 1=short pluck/fast decay)
-  * inharmonicity: Stretches higher partials (0=pure harmonics/plucked string, 0.3-0.5=piano-like, 1=bell-like)
-
-PER-LAYER PROCESSING:
-- gain: Layer volume (0-1)
-- envelope: Optional ADSR envelope for layer amplitude
-- filter: Optional filter (lowpass/highpass/bandpass/notch) with frequency, Q (resonance), and optional envelope
-- saturation: Optional waveshaping (soft/hard/tube/tape) with drive (0-10) and mix (0-1)
-
-GLOBAL PROCESSING:
-- envelope: Master ADSR envelope (always applied)
-- filter: Optional global filter (lowpass/highpass/bandpass/notch/allpass/peaking) with frequency, Q, optional gain (for peaking), and optional envelope
-- lfo: Optional low-frequency oscillator modulating pitch/filter/amplitude/pan with waveform, frequency, depth, optional delay and fade
-
-EFFECTS CHAIN ORDER (applied in sequence):
-EQ → Distortion → Compressor → Chorus → Delay → Reverb → Gate
+You DO NOT need to use all effects and features.
 
 TECHNICAL SPECIFICATIONS:
 ${generateSchemaPrompt()}
@@ -50,12 +21,12 @@ ${generateSchemaPrompt()}
 Return raw JSON only matching the schema above. No markdown formatting.`;
 
 // System prompt for percussive sound batch generation (/ai-kit-generator page)
+// Note: Parameter descriptions are auto-generated from BOUNDS to prevent documentation drift
 const BATCH_SYSTEM_PROMPT = `You are a percussive sound synthesis expert. Generate JSON configurations for drum/percussion sounds.
 
 Return format: { "configs": [...] }
 
-SCHEMA for each config:
-${generateBatchSchemaPrompt()}
+${generateParameterGuide()}
 
 TECHNICAL NOTES FOR PERCUSSION:
 - Percussive sounds are short, transient-heavy, and typically have zero sustain
@@ -64,6 +35,9 @@ TECHNICAL NOTES FOR PERCUSSION:
 - Envelope sustain is typically 0 for percussive sounds (they decay naturally)
 - Filter envelopes with high Q and fast decay create transient definition
 - Delay and reverb are generally avoided in drum kits to prevent timing/bleed issues
+
+SCHEMA for each config:
+${generateBatchSchemaPrompt()}
 
 Return raw JSON only matching the schema above. No markdown formatting.`;
 

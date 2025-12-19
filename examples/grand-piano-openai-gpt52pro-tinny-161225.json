@@ -24,7 +24,7 @@
         },
         "saturation": {
           "type": "hard",
-          "drive": 2.2,
+          "drive": 0.22,
           "mix": 0.25
         },
         "noise": {
@@ -54,7 +54,7 @@
         },
         "saturation": {
           "type": "tape",
-          "drive": 1.3,
+          "drive": 0.13,
           "mix": 0.22
         },
         "karplus": {
@@ -85,7 +85,7 @@
         },
         "saturation": {
           "type": "tape",
-          "drive": 1.1,
+          "drive": 0.11,
           "mix": 0.2
         },
         "karplus": {
@@ -116,13 +116,14 @@
         },
         "saturation": {
           "type": "tube",
-          "drive": 0.9,
+          "drive": 0.09,
           "mix": 0.18
         },
         "fm": {
-          "carrier": 440,
-          "modulator": 1320,
-          "modulationIndex": 120
+          "ratio": 3,
+          "waveform": "sine",
+          "modulationIndex": 1.2,
+          "feedback": 0
         }
       },
       {
@@ -148,7 +149,7 @@
         },
         "saturation": {
           "type": "tube",
-          "drive": 1.1,
+          "drive": 0.11,
           "mix": 0.2
         },
         "oscillator": {
